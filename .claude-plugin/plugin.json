@@ -1,0 +1,8 @@
+{
+  "name": "agentic-toolbox",
+  "description": "Centralized Claude Code skills, agents, hooks, and scripts shared across all local projects",
+  "version": "0.1.0",
+  "author": {
+    "name": "ekoepplin"
+  }
+}
