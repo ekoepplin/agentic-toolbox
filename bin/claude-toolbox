@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# Wrapper that always loads the agentic-toolbox plugin.
-# Symlink or add this to PATH so every `claude-toolbox` invocation gets the plugin.
-PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-exec claude --plugin-dir "$PLUGIN_DIR" "$@"

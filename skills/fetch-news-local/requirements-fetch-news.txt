@@ -1,0 +1,4 @@
+tavily-python
+newsapi-python
+loguru
+duckdb

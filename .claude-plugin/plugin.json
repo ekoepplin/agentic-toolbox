@@ -1,8 +1,13 @@
 {
   "name": "agentic-toolbox",
-  "description": "Centralized Claude Code skills, agents, hooks, and scripts shared across all local projects",
+  "description": "The author's Claude Code skills, subagents, commands, and hooks, distributed as a plugin via the ekoepplin/agentic-toolbox marketplace.",
   "version": "0.1.0",
   "author": {
     "name": "ekoepplin"
-  }
+  },
+  "skills": [
+    "./skills/web-search-local",
+    "./skills/fetch-news-local",
+    "./skills/fetch-free-images-local"
+  ]
 }
