@@ -1,0 +1,4 @@
+# Pinned refs (commit SHA or tag) for external skill repos.
+# Bump via the /update-project skill — it reconciles agentic-workflow/* too.
+# Format:  <name> = <sha-or-tag>
+mattpocock-skills = v1.1.0
