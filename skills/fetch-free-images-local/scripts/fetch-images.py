@@ -1,52 +1,29 @@
 #!/usr/bin/env python3
 """
-Fetch free high-quality coffee equipment images from Pexels and Pixabay.
+Fetch free high-quality images from Pexels and Pixabay for a search query.
 """
 
 import os
 import sys
 import json
 import re
+import argparse
 import requests
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def read_products(project_root: Path) -> List[Tuple[str, str]]:
-    """Read product image IDs and names from products.ts.
-
-    Returns list of (image_id, product_name) tuples.
-    image_id is the filename stem from imageUrl, product_name is used as the search query.
-    """
-    products_file = project_root / "src" / "data" / "products.ts"
-    if not products_file.exists():
-        logger.error(f"Products file not found: {products_file}")
-        return []
-
-    text = products_file.read_text()
-
-    # Extract imageUrl and name pairs from each product block
-    products = []
-    for block in re.split(r"\{", text):
-        name_match = re.search(r'name:\s*"([^"]+)"', block)
-        image_match = re.search(r'imageUrl:\s*"/images/products/([^"]+)\.jpg"', block)
-        if name_match and image_match:
-            products.append((image_match.group(1), name_match.group(1)))
-
-    return products
-
-
-def fetch_from_pexels(query: str, api_key: str) -> List[Dict]:
+def fetch_from_pexels(query: str, api_key: str, count: int) -> List[Dict]:
     """Fetch images from Pexels API."""
     try:
         response = requests.get(
             "https://api.pexels.com/v1/search",
             headers={"Authorization": api_key},
-            params={"query": query, "per_page": 5, "orientation": "square"},
+            params={"query": query, "per_page": count},
             timeout=15,
         )
         response.raise_for_status()
@@ -66,7 +43,7 @@ def fetch_from_pexels(query: str, api_key: str) -> List[Dict]:
         return []
 
 
-def fetch_from_pixabay(query: str, api_key: str) -> List[Dict]:
+def fetch_from_pixabay(query: str, api_key: str, count: int) -> List[Dict]:
     """Fetch images from Pixabay API."""
     try:
         response = requests.get(
@@ -75,7 +52,7 @@ def fetch_from_pixabay(query: str, api_key: str) -> List[Dict]:
                 "key": api_key,
                 "q": query,
                 "image_type": "photo",
-                "per_page": 5,
+                "per_page": max(count, 3),
                 "min_width": 600,
             },
             timeout=15,
@@ -113,7 +90,28 @@ def download_image(url: str, dest: Path) -> bool:
         return False
 
 
+def slugify(text: str) -> str:
+    """Turn a search query into a filename-safe stem."""
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug or "image"
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Fetch free high-quality images from Pexels and Pixabay."
+    )
+    parser.add_argument("query", help="Search query, e.g. 'espresso machine'")
+    parser.add_argument(
+        "--count", type=int, default=1, help="Number of images to download (default: 1)"
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("images"),
+        help="Output directory (default: ./images)",
+    )
+    args = parser.parse_args()
+
     pexels_key = os.environ.get("PEXELS_API_KEY", "")
     pixabay_key = os.environ.get("PIXABAY_API_KEY", "")
 
@@ -125,70 +123,49 @@ def main() -> int:
         )
         return 1
 
-    # Auto-detect project root (walk up from script dir looking for package.json)
-    script_dir = Path(__file__).resolve().parent
-    project_root = script_dir
-    for _ in range(10):
-        if (project_root / "package.json").exists():
-            break
-        project_root = project_root.parent
-    else:
-        logger.error("Could not find project root (no package.json found)")
+    images: List[Dict] = []
+    if pexels_key:
+        images.extend(fetch_from_pexels(args.query, pexels_key, args.count))
+    if pixabay_key and len(images) < args.count:
+        images.extend(fetch_from_pixabay(args.query, pixabay_key, args.count))
+
+    if not images:
+        logger.error(f"No results for query: {args.query!r}")
         return 1
 
-    products = read_products(project_root)
-    if not products:
-        logger.error("No products found in src/data/products.ts")
-        return 1
-
-    output_dir = project_root / "public" / "images" / "products"
+    output_dir = args.out
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    downloaded = {}
-    failed = []
+    stem = slugify(args.query)
+    downloaded: Dict[str, str] = {}
+    failed: List[str] = []
 
-    for image_id, product_name in products:
-        image_path = output_dir / f"{image_id}.jpg"
+    for i, image in enumerate(images[: args.count], 1):
+        name = f"{stem}-{i}.jpg" if args.count > 1 else f"{stem}.jpg"
+        dest = output_dir / name
 
-        if image_path.exists():
-            logger.info(f"[skip] {image_id} — already exists")
-            downloaded[image_id] = str(image_path)
-            continue
-
-        logger.info(f'[search] {image_id}: "{product_name}"')
-
-        images: List[Dict] = []
-        if pexels_key:
-            images.extend(fetch_from_pexels(product_name, pexels_key))
-        if pixabay_key and not images:
-            images.extend(fetch_from_pixabay(product_name, pixabay_key))
-
-        if not images:
-            logger.warning(f"[miss] {image_id} — no results")
-            failed.append(image_id)
-            continue
-
-        if download_image(images[0]["url"], image_path):
-            logger.info(f"[ok] {image_id} ({images[0]['source']})")
-            downloaded[image_id] = str(image_path)
+        logger.info(f'[download] {name} <- {image["source"]}')
+        if download_image(image["url"], dest):
+            logger.info(f"[ok] {name}")
+            downloaded[name] = str(dest)
         else:
-            failed.append(image_id)
+            failed.append(name)
 
-    # Summary
-    total = len(products)
-    print(f"\nDownloaded {len(downloaded)}/{total} images")
-    for pid, path in downloaded.items():
-        print(f"  + {pid}: {path}")
+    requested = min(args.count, len(images))
+    print(f"\nDownloaded {len(downloaded)}/{requested} images")
+    for name, path in downloaded.items():
+        print(f"  + {name}: {path}")
     if failed:
-        print(f"\nMissing ({len(failed)}):")
-        for pid in failed:
-            print(f"  - {pid}")
+        print(f"\nFailed ({len(failed)}):")
+        for name in failed:
+            print(f"  - {name}")
 
     summary = {
+        "query": args.query,
         "downloaded": len(downloaded),
-        "total": total,
+        "requested": requested,
         "images": downloaded,
-        "missing": failed,
+        "failed": failed,
     }
     summary_path = output_dir / "download-summary.json"
     summary_path.write_text(json.dumps(summary, indent=2))

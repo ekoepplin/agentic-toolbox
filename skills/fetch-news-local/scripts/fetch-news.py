@@ -4,14 +4,14 @@ Agent-facing interface for fetch-news-local.
 Produces markdown files for each fetch call.
 
 Usage:
-    python fetch_news.py <topic> [--days N]
-    python fetch_news.py fetch <topic> [--days N]
-    python fetch_news.py recent [--limit N]
+    python scripts/fetch-news.py <topic> [--days N]
+    python scripts/fetch-news.py fetch <topic> [--days N]
+    python scripts/fetch-news.py recent [--limit N]
 
 Examples:
-    python fetch_news.py "coffee trends" --days 7
-    python fetch_news.py "espresso brewing" --days 3
-    python fetch_news.py recent --limit 10
+    python scripts/fetch-news.py "coffee trends" --days 7
+    python scripts/fetch-news.py "espresso brewing" --days 3
+    python scripts/fetch-news.py recent --limit 10
 """
 
 import argparse

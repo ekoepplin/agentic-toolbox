@@ -7,7 +7,7 @@ Fetch news articles via NewsAPI, store in DuckDB, and save as markdown files.
 ### 1. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-fetch-news.txt
 ```
 
 ### 2. Set NewsAPI key
@@ -24,13 +24,13 @@ Get a free API key at [newsapi.org](https://newsapi.org)
 
 ```bash
 # Fetch coffee trends (last 7 days)
-python fetch_news.py "coffee trends" --days 7
+python scripts/fetch-news.py "coffee trends" --days 7
 
 # Fetch espresso brewing news
-python fetch_news.py "espresso brewing" --days 3
+python scripts/fetch-news.py "espresso brewing" --days 3
 
 # Show recent fetches
-python fetch_news.py recent
+python scripts/fetch-news.py recent
 ```
 
 ### Output
@@ -43,7 +43,7 @@ Each fetch creates:
 ### CLI Options
 
 ```bash
-python fetch_news.py <topic> [options]
+python scripts/fetch-news.py <topic> [options]
 
 # Options:
 #   --days N       Days of history (default: 7)
@@ -56,19 +56,19 @@ python fetch_news.py <topic> [options]
 
 ```bash
 # Fetch with 14 days history (auto-saves to DB + markdown)
-python fetch_news.py "coffee industry" --days 14
+python scripts/fetch-news.py "coffee industry" --days 14
 
 # Fetch and get JSON output for programmatic use
-python fetch_news.py "espresso" --days 3 --json
+python scripts/fetch-news.py "espresso" --days 3 --json
 
 # List recent fetches
-python fetch_news.py recent --limit 5
+python scripts/fetch-news.py recent --limit 5
 
 # Query database (default: show recent 10 articles)
-python fetch_news.py database
+python scripts/fetch-news.py database
 
 # Custom SQL query
-python fetch_news.py database --query "SELECT source_name, COUNT(*) FROM articles GROUP BY source_name"
+python scripts/fetch-news.py database --query "SELECT source_name, COUNT(*) FROM articles GROUP BY source_name"
 ```
 
 ### Python API
@@ -137,7 +137,7 @@ export NEWS_API_KEY=your-key-here
 NewsAPI free tier allows 50 requests/day. Wait 24h or upgrade.
 
 **"Database not found"**
-Run `python fetch_news.py <topic>` first to create the database.
+Run `python scripts/fetch-news.py <topic>` first to create the database.
 
 **"No files in output/**
-Run `python fetch_news.py <topic>` first to create files.
+Run `python scripts/fetch-news.py <topic>` first to create files.

@@ -5,7 +5,7 @@ description: Fetch news articles via NewsAPI and save as markdown files. Use whe
 
 # fetch-news-local
 
-Fetch news articles via NewsAPI and save as markdown files. Simple, portable, no database required.
+Fetch news articles via NewsAPI, store them in a local DuckDB database, and save as markdown files.
 
 ## Agent Usage
 
@@ -43,7 +43,7 @@ Each fetch creates:
 ### 1. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-fetch-news.txt
 ```
 
 ### 2. Set NewsAPI key
@@ -88,9 +88,9 @@ python scripts/fetch-news.py recent --limit 3
 ## Files
 
 ```
+requirements-fetch-news.txt        # Python dependencies
 scripts/
 ├── fetch-news.py                  # Agent-facing CLI
-├── requirements-fetch-news.txt    # Python dependencies
 └── output/                        # Generated markdown/JSON files
     ├── news_coffee_trends_20260330_143022.md
     └── news_coffee_trends_20260330_143022.json
@@ -107,4 +107,4 @@ export NEWS_API_KEY=your-key-here
 NewsAPI free tier allows 50 requests/day. Wait 24h or upgrade.
 
 **No output files found**
-Run `python fetch_news.py <topic>` first to create files.
+Run `python scripts/fetch-news.py <topic>` first to create files.

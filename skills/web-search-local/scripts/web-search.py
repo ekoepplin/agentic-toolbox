@@ -2,8 +2,8 @@
 web-search-local: Search the web or extract URL content via Tavily.
 
 Usage:
-    python3 __main__.py "search query"
-    python3 __main__.py "https://example.com"
+    python3 scripts/web-search.py "search query"
+    python3 scripts/web-search.py "https://example.com"
 """
 
 import os
@@ -65,7 +65,7 @@ def extract(client, url: str) -> str:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 __main__.py \"<search query or URL>\"")
+        print("Usage: python3 scripts/web-search.py \"<search query or URL>\"")
         sys.exit(1)
 
     arg = sys.argv[1].strip()
