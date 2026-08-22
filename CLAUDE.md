@@ -93,3 +93,14 @@ Transform tasks into verifiable goals before starting. For multi-step tasks, sta
 ```
 
 Strong success criteria enable independent looping. Weak criteria require constant clarification.
+
+---
+
+## Plugin Drift Guard
+
+**Sync rule:** every shipped skill MUST be listed in both `.claude-plugin/plugin.json` and the
+README, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST
+NOT appear in `plugin.json`. `plugin.json` is the only thing that reaches consumers, so this is the
+plugin contract. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you
+add, rename, or promote a skill, update `plugin.json` **and** the README together, then run
+`scripts/check.sh`.
