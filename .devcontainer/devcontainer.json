@@ -1,0 +1,128 @@
+{
+  // ============================================================================
+  // PROJECT-SPECIFIC: edit these when copying to a new project
+  // ============================================================================
+  "name": "agentic-toolbox",
+
+  // ── build: pass your Mac username so the hooks symlink resolves correctly ──
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": { "MAC_USER": "${localEnv:USER}" }
+  },
+
+  // ============================================================================
+  // AGENTS — Local LLM routing (project-specific model preferences)
+  // ============================================================================
+  // Agent 1 (Ollama): claude-zgx  → host.docker.internal:11434 via SSH tunnel
+  // Agent 2 (vLLM):   claude-vllm → host.docker.internal:8000  via SSH tunnel
+  // Agent 3 (Cloud):  claude-anthropic → Anthropic API (no env vars needed)
+  // ============================================================================
+  "remoteEnv": {
+    // ── PROJECT: preferred models for this project ────────────────────────────
+    "VLLM_DEFAULT_MODEL": "qwen",
+    // ── PROJECT: API keys forwarded from Mac host environment ─────────────────
+    "TAVILY_API_KEY": "${localEnv:TAVILY_API_KEY}",
+    "NEWS_API_KEY": "${localEnv:NEWS_API_KEY}",
+    "PEXELS_API_KEY": "${localEnv:PEXELS_API_KEY}",
+    "GH_TOKEN": "${localEnv:GITHUB_ROBOT_MAC_MINI}",
+    "GITHUB_TOKEN_MACBOOK": "${localEnv:GITHUB_TOKEN_MACBOOK}",
+    "GITHUB_ROBOT_MAC_MINI": "${localEnv:GITHUB_ROBOT_MAC_MINI}",
+    // ── BASE: leave unchanged ─────────────────────────────────────────────────
+    "ENABLE_LSP_TOOL": "1",
+    "RTK_MODE": "token-efficient",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+
+  // ============================================================================
+  // BASE: copy unchanged to any project
+  // ============================================================================
+  "runArgs": [
+    "--add-host=host.docker.internal:host-gateway",
+    // ── MOBILE: expose SSH on all interfaces so Tailscale traffic reaches sshd ──
+    // Standard VS Code appPort only binds 127.0.0.1 — won't work over VPN
+    // NOTE: host port must be UNIQUE per project — other devcontainers on this
+    // machine also publish sshd, so they'd collide on the same host port.
+    // agentic-toolbox uses 2224; container still listens on 2222 internally.
+    "--publish=0.0.0.0:2224:2222"
+  ],
+
+  // ── DEV SERVERS: forward via VS Code (localhost on host, no rebuild) ────────
+  "forwardPorts": [3000],
+
+  // ── SKILLS ──────────────────────────────────────────────────────────────────
+  // Project skills (committed in repo) → .claude/skills/<name>/
+  //   fetch-news-local              — coffee industry news (NewsAPI + DuckDB)
+  //   fetch-free-images-local       — free product images (Pexels + Pixabay)
+  //   web-search-local              — web search fallback for local models
+  //   diagnose                      — disciplined debug loop (mattpocock/skills)
+  //   grill-me                      — interview before building (mattpocock/skills)
+  //   grill-with-docs               — grill-me + CONTEXT.md + ADRs (mattpocock/skills)
+  //   improve-codebase-architecture — find deepening opportunities (mattpocock/skills)
+  //   prototype                     — throwaway prototype builder (mattpocock/skills)
+  //   setup-matt-pocock-skills      — per-repo config scaffold (mattpocock/skills)
+  //   tdd                           — red-green-refactor loop (mattpocock/skills)
+  //   to-issues                     — PRD → GitHub issues (mattpocock/skills)
+  //   to-prd                        — context → PRD issue (mattpocock/skills)
+  //   triage                        — issue triage state machine (mattpocock/skills)
+  //   write-a-skill                 — scaffold new skills (mattpocock/skills)
+  //   zoom-out                      — higher-level code context (mattpocock/skills)
+  //
+  // External skills (installed by postCreateCommand) → .agents/skills/<name>/
+  //   frontend-design  (anthropics/skills)  — high-quality UI generation
+  //   agent-skills     (addyosmani)          — spec/plan/build/test/review/ship workflows
+  //   Symlinked into .claude/skills/<name> by the skills CLI
+  //
+  // ── MCPs — add project MCP servers here ─────────────────────────────────────
+  // headroom (headroomlabs-ai/headroom) — context compression layer, 60-95% input
+  //   token reduction. Installed via pip in Dockerfile; registered via
+  //   `headroom mcp install` in post-create.sh → tools: headroom_compress,
+  //   headroom_retrieve, headroom_stats
+
+  // ── MOUNTS ──────────────────────────────────────────────────────────────────
+  // ~/.claude      → /home/node/.claude      (settings, sessions, memory)
+  // ~/.claude.json is staged read-only at /tmp/claude.json.host and COPIED
+  // in postCreateCommand — avoids race conditions with Mac's Claude Code.
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=/tmp/claude.json.host,type=bind,readonly",
+    // ── MOBILE: SSH authorized_keys from host → copied into container on create ─
+    // Populate ~/.ssh/container_authorized_keys on the host with public keys
+    // for every device that needs SSH access (Mac, iPhone, etc.)
+    "source=${localEnv:HOME}/.ssh/container_authorized_keys,target=/tmp/container_authorized_keys,type=bind",
+    // ── AGENT: persistent logs + scratch space (survive container rebuilds) ──────
+    "source=${localEnv:HOME}/agent-logs,target=/home/node/agent-logs,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/agent-work,target=/home/node/agent-work,type=bind"
+  ],
+
+  "remoteUser": "node",
+
+  // ── postCreateCommand ────────────────────────────────────────────────────────
+  // Runs once after container creation (not on every start).
+  // Copies authorized_keys (bind-mount has wrong ownership for sshd — must copy).
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+
+  // ── postStartCommand ─────────────────────────────────────────────────────────
+  // Runs on every container start. Starts sshd so SSH access is always available.
+  "postStartCommand": "sudo /usr/sbin/sshd",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        // The SSH tunnel (LocalForward *:PORT) is the only transport to ZGX.
+        // VS Code auto-forwarding plants a 127.0.0.1:PORT listener that shadows
+        // the tunnel; Docker routes host.docker.internal to host loopback, so the
+        // container hits VS Code's dead forward instead of the tunnel. Disable it.
+         "remote.autoForwardPorts": false
+      },
+      "extensions": [
+        // ── BASE extensions ───────────────────────────────────────────────────
+        "editorconfig.editorconfig",
+        "ms-vscode.vscode-json",
+        "donjayamanne.python-extension-pack"
+        // ── PROJECT extensions: add language/framework tools here ─────────────
+      ]
+    }
+  }
+}

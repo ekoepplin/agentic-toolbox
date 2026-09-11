@@ -58,49 +58,129 @@ agentic-toolbox/
 
 ---
 
-## Behavioral Guidelines
+# Behavioral guidelines
 
-These travel with every project that imports this file. They bias toward caution over speed —
-use judgment on trivial tasks.
+Guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-### 1. Think Before Coding
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-Before implementing: state assumptions explicitly. If uncertain, ask. If multiple interpretations
-exist, present them — don't pick silently. If a simpler approach exists, say so. If something is
-unclear, stop and name what's confusing.
+## 1. Think Before Coding
 
-### 2. Simplicity First
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-Minimum code that solves the problem. No features beyond what was asked, no abstractions for
-single-use code, no unrequested "flexibility", no error handling for impossible scenarios.
-If 200 lines could be 50, rewrite it.
+Before implementing:
 
-### 3. Surgical Changes
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-Touch only what you must. Don't improve adjacent code, comments, or formatting. Match existing
-style. If you notice unrelated dead code, mention it — don't delete it. Remove only
-imports/variables/functions that your changes made unused.
+## 2. Simplicity First
 
-Every changed line should trace directly to the user's request.
+**Minimum code that solves the problem. Nothing speculative.**
 
-### 4. Goal-Driven Execution
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
 
-Transform tasks into verifiable goals before starting. For multi-step tasks, state a brief plan:
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Subagent Strategy
+
+- Use subagents liberally to keep main context window clean.
+- Offload research, exploration, and parallel analysis to subagents.
+- One task per subagent for focused execution.
+- Don't duplicate effort — if a subagent is researching something, don't search for the same thing yourself.
+
+## 6. Self-Improvement Loop
+
+- After ANY correction from the user: append to `agentic-workflow/tasks/lessons.md` with the pattern. Don't ask — just log.
+- Write rules that prevent the same mistake.
+- Review lessons at session start for relevant context.
+
+## 7. Task Management
+
+For multi-step tasks, write a plan to `agentic-workflow/tasks/todo.md` before starting:
 
 ```
 1. [Step] → verify: [check]
 2. [Step] → verify: [check]
 ```
 
-Strong success criteria enable independent looping. Weak criteria require constant clarification.
+Canonical task file paths:
+
+- `agentic-workflow/tasks/todo.md` — task list and success criteria
+- `agentic-workflow/tasks/plan.md` — current implementation plan. Overwrite when a new plan supersedes the previous one. Read before starting any non-trivial task.
+- `agentic-workflow/tasks/lessons.md` — append-only lessons learned
 
 ---
 
-## Plugin Drift Guard
+## Agent skills
 
-**Sync rule:** every shipped skill MUST be listed in both `.claude-plugin/plugin.json` and the
-README, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST
-NOT appear in `plugin.json`. `plugin.json` is the only thing that reaches consumers, so this is the
-plugin contract. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you
-add, rename, or promote a skill, update `plugin.json` **and** the README together, then run
-`scripts/check.sh`.
+### Issue tracker
+
+Issues are tracked in this repo's GitHub Issues via the `gh` CLI; external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### AFK execution loop
+
+`agentic-workflow/MATT-WORKFLOW.md` maps the think → plan → break down → execute → refactor pipeline onto this repo. The execute stage is the `agentic-workflow/ralph/` loop (`agentic-workflow/ralph/once.sh`, `agentic-workflow/ralph/afk.sh`) — an unattended agent that works one `ready-for-agent` issue per invocation. Read that doc before running or modifying ralph.
+
+### Skill dependencies
+
+External skills (mattpocock/skills) are **pinned** by ref in `.devcontainer/skills.lock`; `install-skills.sh` checks out exactly that ref, so the skill set is reproducible and doesn't drift on rebuild. Bump the pin with the `/update-project` skill — it reviews the upstream skill-set diff, updates the lock, and reconciles `agentic-workflow/*` against any renamed skills. Never bump by editing the lock blindly.
+
+### Plugin drift guard
+
+**Sync rule:** every shipped skill MUST be listed in both `.claude-plugin/plugin.json` and the README, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST NOT appear in `plugin.json`. This is the plugin contract (see ADR-0002) — `plugin.json` is the only thing that reaches consumers. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you add, rename, or promote a skill, update `plugin.json` **and** the README together, then run `scripts/check.sh`.
+
+### Verification
+
+This repo has **no unit-test framework**. The gate is `scripts/check.sh` — the plugin drift guard, which exits non-zero on any mismatch between `plugin.json`, the README, and the skills on disk. Run it after any change that adds, renames, or promotes a skill. This overrides the unit-test framing of the §4 examples above.
