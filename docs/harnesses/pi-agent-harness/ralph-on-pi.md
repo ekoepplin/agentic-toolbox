@@ -309,6 +309,15 @@ agentic-workflow/ralph/pi-once.sh <scratch-issue>
 # expect: one conventional commit, Closes #N trailer, issue auto-closed on push
 ```
 
+## Validation
+
+2026-09-11 — smoke-tested on this issue (#7): the pi loop delivered it itself
+via `agentic-workflow/ralph/pi-once.sh` — provider `vllm-hpzgx`, model `qwen`,
+local HP-ZGX endpoint (`http://localhost:8000/v1`). A single pi run did the
+whole issue end to end: issue fetch, this single-file edit, the
+`scripts/check.sh` gate, and a commit whose `Closes #7` trailer auto-closes
+the issue on push.
+
 ## References
 
 - [connecting-local-models.md](./connecting-local-models.md) — endpoint + provider registration (this doc's prerequisite)
