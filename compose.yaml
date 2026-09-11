@@ -1,0 +1,48 @@
+# The base's own workbench (issue #9): the base dogfoods itself as its own
+# host project. A single service — the workbench — runs the base image and
+# docks the base at its mirrored Mac path. The thin devcontainer wrapper
+# (.devcontainer/devcontainer.json) opens VS Code into exactly this service.
+#
+#   make image              # build the base image first (issue #8)
+#   docker compose up -d    # start the workbench
+#   ssh -p 2224 node@localhost
+#
+# `image` must stay the Makefile's canonical BASE_IMAGE (agentic-toolbox-base:latest).
+
+services:
+  workbench:
+    image: agentic-toolbox-base:latest
+
+    # The host project's code lives at the container's working directory —
+    # here that is the base itself, at its mirrored Mac path.
+    working_dir: /Users/ekoepplin/repos/agentic-toolbox
+
+    volumes:
+      # Docked base, at its mirrored Mac path.
+      - ${HOME}/repos/agentic-toolbox:/Users/ekoepplin/repos/agentic-toolbox
+      # Host Claude config (settings, sessions, memory).
+      - ${HOME}/.claude:/home/node/.claude
+      # Staged read-only; post-create copies it to /home/node/.claude.json
+      # (avoids racing with the Mac's Claude Code).
+      - ${HOME}/.claude.json:/tmp/claude.json.host:ro
+      # Staged SSH authorized_keys; post-create copies it into
+      # /home/node/.ssh/ (the bind mount has wrong ownership for sshd).
+      - ${HOME}/.ssh/container_authorized_keys:/tmp/container_authorized_keys
+      # Agent logs + scratch space (survive container rebuilds).
+      - ${HOME}/agent-logs:/home/node/agent-logs:cached
+      - ${HOME}/agent-work:/home/node/agent-work
+
+    ports:
+      # SSH on all interfaces so Tailscale/mobile traffic reaches sshd.
+      # 2224 is this project's published port (unique per project); sshd
+      # inside the container listens on 2222.
+      - "0.0.0.0:2224:2222"
+
+    extra_hosts:
+      # Local LLM endpoints sit on the Mac's loopback and are reached via
+      # host.docker.internal.
+      - "host.docker.internal:host-gateway"
+
+    # Keep the container alive and start sshd on every start (replaces the
+    # old devcontainer's postStartCommand).
+    command: ["/bin/sh", "-c", "sudo /usr/sbin/sshd && exec sleep infinity"]

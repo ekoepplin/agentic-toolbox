@@ -1,15 +1,23 @@
 {
   // ============================================================================
-  // PROJECT-SPECIFIC: edit these when copying to a new project
+  // THIN DEVCONTAINER WRAPPER (issue #9)
+  //
+  // The workbench — base image, the docked base at its mirrored Mac path, all
+  // mounts, the published SSH port, sshd startup — lives in the root compose
+  // stack (compose.yaml). This file only tells VS Code which service to open
+  // and what to run on first create.
+  //
+  //   make image   # build the base image the compose stack runs (issue #8)
+  //   Reopen in Container  →  lands in the compose workbench
   // ============================================================================
   "name": "agentic-toolbox",
 
-  // ── build: pass your Mac username so the hooks symlink resolves correctly ──
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".",
-    "args": { "MAC_USER": "${localEnv:USER}" }
-  },
+  // ── WORKBENCH: the compose service to open ─────────────────────────────────
+  "dockerComposeFile": "../compose.yaml",
+  "service": "workbench",
+  // The docked base's mirrored Mac path — where VS Code opens and where user
+  // commands (postCreateCommand) run. Same path the compose volume publishes.
+  "workspaceFolder": "/Users/ekoepplin/repos/agentic-toolbox",
 
   // ============================================================================
   // AGENTS — Local LLM routing (project-specific model preferences)
@@ -34,77 +42,22 @@
     "DISABLE_AUTOUPDATER": "1"
   },
 
-  // ============================================================================
-  // BASE: copy unchanged to any project
-  // ============================================================================
-  "runArgs": [
-    "--add-host=host.docker.internal:host-gateway",
-    // ── MOBILE: expose SSH on all interfaces so Tailscale traffic reaches sshd ──
-    // Standard VS Code appPort only binds 127.0.0.1 — won't work over VPN
-    // NOTE: host port must be UNIQUE per project — other devcontainers on this
-    // machine also publish sshd, so they'd collide on the same host port.
-    // agentic-toolbox uses 2224; container still listens on 2222 internally.
-    "--publish=0.0.0.0:2224:2222"
-  ],
+  "remoteUser": "node",
+
+  // ── postCreateCommand ────────────────────────────────────────────────────────
+  // Runs once after container creation (not on every start). Copies the staged
+  // SSH keys + claude.json, installs pinned external skills, registers the
+  // headroom MCP. sshd itself is started by the compose service on every start.
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
 
   // ── DEV SERVERS: forward via VS Code (localhost on host, no rebuild) ────────
   "forwardPorts": [3000],
 
-  // ── SKILLS ──────────────────────────────────────────────────────────────────
-  // Project skills (committed in repo) → .claude/skills/<name>/
-  //   fetch-news-local              — coffee industry news (NewsAPI + DuckDB)
-  //   fetch-free-images-local       — free product images (Pexels + Pixabay)
-  //   web-search-local              — web search fallback for local models
-  //   diagnose                      — disciplined debug loop (mattpocock/skills)
-  //   grill-me                      — interview before building (mattpocock/skills)
-  //   grill-with-docs               — grill-me + CONTEXT.md + ADRs (mattpocock/skills)
-  //   improve-codebase-architecture — find deepening opportunities (mattpocock/skills)
-  //   prototype                     — throwaway prototype builder (mattpocock/skills)
-  //   setup-matt-pocock-skills      — per-repo config scaffold (mattpocock/skills)
-  //   tdd                           — red-green-refactor loop (mattpocock/skills)
-  //   to-issues                     — PRD → GitHub issues (mattpocock/skills)
-  //   to-prd                        — context → PRD issue (mattpocock/skills)
-  //   triage                        — issue triage state machine (mattpocock/skills)
-  //   write-a-skill                 — scaffold new skills (mattpocock/skills)
-  //   zoom-out                      — higher-level code context (mattpocock/skills)
-  //
-  // External skills (installed by postCreateCommand) → .agents/skills/<name>/
-  //   frontend-design  (anthropics/skills)  — high-quality UI generation
-  //   agent-skills     (addyosmani)          — spec/plan/build/test/review/ship workflows
-  //   Symlinked into .claude/skills/<name> by the skills CLI
-  //
   // ── MCPs — add project MCP servers here ─────────────────────────────────────
   // headroom (headroomlabs-ai/headroom) — context compression layer, 60-95% input
-  //   token reduction. Installed via pip in Dockerfile; registered via
+  //   token reduction. Installed via pip in the base image; registered via
   //   `headroom mcp install` in post-create.sh → tools: headroom_compress,
   //   headroom_retrieve, headroom_stats
-
-  // ── MOUNTS ──────────────────────────────────────────────────────────────────
-  // ~/.claude      → /home/node/.claude      (settings, sessions, memory)
-  // ~/.claude.json is staged read-only at /tmp/claude.json.host and COPIED
-  // in postCreateCommand — avoids race conditions with Mac's Claude Code.
-  "mounts": [
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
-    "source=${localEnv:HOME}/.claude.json,target=/tmp/claude.json.host,type=bind,readonly",
-    // ── MOBILE: SSH authorized_keys from host → copied into container on create ─
-    // Populate ~/.ssh/container_authorized_keys on the host with public keys
-    // for every device that needs SSH access (Mac, iPhone, etc.)
-    "source=${localEnv:HOME}/.ssh/container_authorized_keys,target=/tmp/container_authorized_keys,type=bind",
-    // ── AGENT: persistent logs + scratch space (survive container rebuilds) ──────
-    "source=${localEnv:HOME}/agent-logs,target=/home/node/agent-logs,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/agent-work,target=/home/node/agent-work,type=bind"
-  ],
-
-  "remoteUser": "node",
-
-  // ── postCreateCommand ────────────────────────────────────────────────────────
-  // Runs once after container creation (not on every start).
-  // Copies authorized_keys (bind-mount has wrong ownership for sshd — must copy).
-  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
-
-  // ── postStartCommand ─────────────────────────────────────────────────────────
-  // Runs on every container start. Starts sshd so SSH access is always available.
-  "postStartCommand": "sudo /usr/sbin/sshd",
 
   "customizations": {
     "vscode": {
