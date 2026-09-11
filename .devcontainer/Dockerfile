@@ -1,4 +1,7 @@
-FROM --platform=${TARGETPLATFORM:-linux/amd64} node:20-slim
+# node:22-slim — pi requires Node >= 22.19.0; nothing else in the image pins Node 20.
+# No --platform pin: the base image is a local artifact, built for the host
+# architecture it will run on (make image).
+FROM node:22-slim
 
 # Install system packages — openssh-server + tmux + fzf enable mobile SSH access
 RUN apt-get update && apt-get install -y python3 python3-pip python3-venv wget unzip curl git zsh \
@@ -66,6 +69,11 @@ SHELL ["/bin/zsh", "-c"]
 # Claude Code CLI → /usr/local/lib/node_modules/@anthropic-ai/claude-code  (global npm)
 USER root
 RUN npm install -g @anthropic-ai/claude-code && \
+    chown -R 1000:1000 /home/node/.npm
+
+# pi coding agent CLI → /usr/local/lib/node_modules/@earendil-works/pi-coding-agent (global npm)
+# --ignore-scripts: pi's documented npm install path (no lifecycle scripts needed)
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
     chown -R 1000:1000 /home/node/.npm
 
 # ccstatusline — Claude Code status line (sirmalloc/ccstatusline)

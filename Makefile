@@ -1,0 +1,61 @@
+# Top-level build target for the base image (issue #8).
+#
+# The base image is the single development image every workbench runs: both
+# supported harnesses (Claude Code + pi) alongside the shared environment —
+# key-only sshd on the internal SSH port (2222), tmux, gh, duckdb, the
+# skill-dependency venv, zsh setup, and the mobile-SSH plumbing.
+#
+# The build context is .devcontainer/ — base files only. A clean clone of the
+# base (or the base docked inside a host project) produces the same image, and
+# no host-project file can ever enter the context.
+#
+# The image is tagged locally and built for the host architecture (the base
+# runs on the Mac that built it; there is no registry).
+
+# Canonical image tag. The workbench compose stack (#9) and the scaffolder
+# (#11) reference exactly this name — do not rename without updating them.
+BASE_IMAGE := agentic-toolbox-base:latest
+DOCKERFILE := .devcontainer/Dockerfile
+CONTEXT    := .devcontainer
+
+.PHONY: image probe
+
+# Build the base image from the base's own files only.
+image:
+	docker build -f $(DOCKERFILE) -t $(BASE_IMAGE) $(CONTEXT)
+
+# Issue #8 acceptance probes against $(BASE_IMAGE):
+#   in-image:  both harness CLIs report a version (plus Node >= 22 for pi)
+#   regression: sshd config (internal port, key-only, single user), tmux, gh,
+#               duckdb, and the skill-dependency venv are all still present.
+probe: image
+	docker run --rm $(BASE_IMAGE) /bin/sh -c ' \
+		set -e; \
+		echo "== base image probes: $(BASE_IMAGE) =="; \
+		echo "-- harnesses --"; \
+		node --version; \
+		[ "$$(node -p "process.versions.node" | cut -d. -f1)" -ge 22 ] \
+			|| { echo "FATAL: Node major < 22 (pi needs >= 22.19)"; exit 1; }; \
+		claude --version; \
+		pi --version; \
+		echo "-- sshd config: internal port, key-only, single user --"; \
+		grep -qx "Port 2222" /etc/ssh/sshd_config \
+			|| { echo "FATAL: sshd Port 2222 not set"; exit 1; }; \
+		grep -qx "PasswordAuthentication no" /etc/ssh/sshd_config \
+			|| { echo "FATAL: sshd is not key-only"; exit 1; }; \
+		grep -qx "AllowUsers node" /etc/ssh/sshd_config \
+			|| { echo "FATAL: sshd AllowUsers node missing"; exit 1; }; \
+		echo "sshd: Port 2222, key-only, AllowUsers node"; \
+		echo "-- tmux --"; \
+		tmux -V; \
+		echo "-- gh --"; \
+		gh --version | head -n1; \
+		echo "-- duckdb --"; \
+		duckdb_bin=$$(ls /usr/local/bin/duckdb* | head -n1) \
+			|| { echo "FATAL: no duckdb binary in /usr/local/bin"; exit 1; }; \
+		$$duckdb_bin --version; \
+		echo "-- skill-dependency venv --"; \
+		/opt/venv/bin/python -c "import newsapi, loguru, duckdb, tavily, requests; print(\"venv: skill deps importable\")"; \
+		command -v headroom; \
+		echo "== all probes passed =="; \
+	'
