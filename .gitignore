@@ -19,3 +19,8 @@ agentic-workflow/
 .env.ralph
 agentic-workflow-notes/
 blueprint-workflow.md
+
+# Pi harness local config (skill exposure via .pi/settings.json, ralph
+# guardrail extension). Local dev aid, never committed — same rationale as
+# agentic-workflow/ (docs/adr/0001).
+.pi/
