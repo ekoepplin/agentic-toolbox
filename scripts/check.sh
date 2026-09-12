@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Plugin drift guard.
+# Adapter-manifest drift guard.
 #
-# Enforces the consistency invariant that keeps the plugin coherent (see
-# CLAUDE.md and ADR-0002): every shipped skill appears in both
-# .claude-plugin/plugin.json and the README, and nothing listed is missing on
-# disk. Draft skills under skills/in-progress/ must NOT appear in plugin.json.
+# Enforces the adapter-manifest contract (see CLAUDE.md): every shipped skill
+# appears in both the Claude Code harness adapter's manifest
+# (.claude-plugin/plugin.json) and the README, and nothing listed is missing
+# on disk. Draft skills under skills/in-progress/ must NOT appear in the
+# manifest.
 #
 # Exits non-zero on any mismatch.
 set -euo pipefail
@@ -77,7 +78,7 @@ for d in ${drafts[@]+"${drafts[@]}"}; do
 done
 
 if [ "$fail" -ne 0 ]; then
-  echo "check.sh: plugin drift detected." >&2
+  echo "check.sh: adapter-manifest drift detected." >&2
   exit 1
 fi
-echo "check.sh: plugin.json <-> disk <-> README in sync."
+echo "check.sh: adapter manifest <-> disk <-> README in sync."

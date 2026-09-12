@@ -42,7 +42,7 @@ _Avoid_: consumer repo (legacy, ADR-0002-era), downstream repo, client, "enginee
 
 **Dock**:
 The runtime mechanism by which a **Host project** consumes the **Base**: the base repo is bind-mounted into the host's container, and a start-up step wires the base's content into each **harness**'s discovery paths. Docking is a locative, reversible relationship — unlike installing a product.
-_Avoid_: install (that word is reserved for how the **Plugin** adapter is installed from the marketplace), embed, vendor
+_Avoid_: install, embed, vendor
 
 **Consumer repo**:
 *Retired.* A repository that installed the **Plugin** from the marketplace. Marketplace delivery is retired; the **Host project** supersedes this pattern entirely.
@@ -53,7 +53,7 @@ An external collection of skills (currently `mattpocock-skills`) fetched into th
 _Avoid_: third-party plugin, dependency (it is not installed as one)
 
 **Local-dev bootstrap**:
-The `scripts/` step a developer runs after cloning: it fetches the **vendored skill set** into `.agents/skills/` and symlinks its skills into `.claude/skills/` for use in this repo's own Claude sessions. Both `.agents/skills/` and `.claude/skills/` are git-ignored; only `.claude/settings.json` is committed.
+*Retired.* The former `scripts/` step a developer ran after cloning: it fetched the **vendored skill set** into `.agents/skills/` and symlinked its skills into `.claude/skills/` for use in this repo's own Claude sessions. The Mac-side route is gone; its external-skill fetch discipline lives on inside the **dock** step (`.devcontainer/scripts/install-skills.sh`, run on every workbench start). Both `.agents/skills/` and `.claude/skills/` are git-ignored; only `.claude/settings.json` is committed.
 _Avoid_: installer (that word is reserved for how a Consumer repo installs the plugin)
 
 ## Relationships
@@ -63,7 +63,7 @@ _Avoid_: installer (that word is reserved for how a Consumer repo installs the p
 - A **Host project** **docks** the **base**: the base repo is mounted into the host's **workbench** and wired into every supported harness
 - A **skill** is **shipped** or a **draft**; only shipped skills are listed in `plugin.json`
 - The marketplace delivery route for the **plugin** is retired; the adapter is delivered exclusively by docking
-- The **vendored skill set** is wired in by the **local-dev bootstrap** and is never part of the **base**
+- The **vendored skill set** is wired in by the **dock** step (`install-skills.sh`) and is never part of the **base**
 
 ## Flagged ambiguities
 

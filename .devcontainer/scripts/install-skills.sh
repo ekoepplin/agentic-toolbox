@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # External skills installer — called by the dock step (dock.sh) on every
-# workbench start, and by scripts/bootstrap-dev.sh after a fresh clone.
+# workbench start.
 #
 # Skill repos are PINNED. The pinned ref (commit SHA or tag) for each repo lives
 # in .devcontainer/skills.lock, so a devcontainer rebuild always reproduces the
