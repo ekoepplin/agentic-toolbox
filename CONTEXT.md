@@ -1,6 +1,6 @@
 # Agentic Toolbox
 
-An agentic development **base**: an environment (docker image + compose) plus shared agentic content (skills, subagents, commands, hooks, workflows, docs) that other projects **dock** into at runtime to get agentic development across one or more **harnesses**. The Claude Code **plugin** is one of the base's **harness adapters**, not the repo's identity (supersedes `docs/adr/0002`). Locally it also wires in a vendored external skill set as a development aid, which is never distributed.
+An agentic development **base**: an environment (docker image + compose) plus shared agentic content (skills, subagents, commands, hooks, workflows, docs) that other projects **dock** into at runtime to get agentic development across one or more **harnesses**. The Claude Code **plugin** is one of the base's **harness adapters**, not the repo's identity (supersedes `docs/adr/0002`). Locally it also wires in a vendored external skill set as a development aid, which the dock step distributes into every docked workbench but which is never committed.
 
 ## Language
 
@@ -49,7 +49,7 @@ _Avoid_: install, embed, vendor
 _Avoid_: downstream repo, client
 
 **Vendored skill set**:
-An external collection of skills (currently `mattpocock-skills`) fetched into the working tree under `.agents/skills/` as a **local development aid** — used to help build this repo, never shipped in the plugin. Kept out of version control and re-fetched from upstream rather than committed (see `docs/adr/0001`).
+An external collection of skills (currently `mattpocock-skills`) fetched into the working tree under `.agents/skills/` — a **local development aid** that the dock step (`install-skills.sh`) wires into every docked workbench. It *is* distributed at runtime, but never committed: kept out of version control and re-fetched from upstream at its pinned ref (see `docs/adr/0001`).
 _Avoid_: third-party plugin, dependency (it is not installed as one)
 
 **Local-dev bootstrap**:
