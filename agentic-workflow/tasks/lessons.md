@@ -4,6 +4,18 @@ Append-only. Most recent at top.
 
 ---
 
+## 2026-09-12 — editing a live agent's runtime config races the agent
+
+Hand-edited `.pi/remote-pi/config.json` (`auto_start_relay` toggle) while pi
+sessions were running. remote-pi rewrote the file from its own in-memory state,
+colliding with the edit and leaving a corrupted duplicate-key JSON.
+
+**Rule:** don't hand-edit a process's runtime config file while that process is
+live — it will rewrite it and the edit races. Change such settings from within
+the app (its own command), or only when no owning process is running.
+
+---
+
 ## 2026-09-12 — ralph-pi on issue #10 (dock step)
 
 ### `gh pr create` does not accept `--squash`
