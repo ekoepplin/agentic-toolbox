@@ -143,4 +143,8 @@ print(f"pi: models.json {models_status} ({agent_dir})")
 print(f"pi: settings.json {settings_status} ({agent_dir})")
 PY
 
+# Pinned pi extensions (.devcontainer/pi-extensions.lock) — installed after the
+# config is seeded so pi writes packages[] into the freshly-seeded settings.json.
+bash "$SCRIPTS_DIR/install-pi-extensions.sh"
+
 echo "dock: all harnesses wired"
