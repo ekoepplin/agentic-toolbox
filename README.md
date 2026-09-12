@@ -1,19 +1,19 @@
 # agentic-toolbox
 
-A Claude Code **plugin** that packages skills, subagents, slash commands, and hooks,
-installed into other repositories through the Claude Code marketplace
-(see `docs/adr/0002`). Shipped components are invoked under the
-`/agentic-toolbox:` namespace, so they never collide with a consumer repo's own
-skills.
+The agentic development **base**: the environment (base image + compose stack)
+and the shared agentic content (skills, subagents, slash commands, hooks) that
+host projects **dock** into at runtime to get agentic development across every
+supported harness. The Claude Code **plugin** under `.claude-plugin/` is the
+base's Claude Code harness adapter. See `CONTEXT.md` for the domain vocabulary.
 
-## Install
+Shipped components are invoked under the `/agentic-toolbox:` namespace, so
+they never collide with a host project's own skills.
 
-From a consumer repo, add this repository as a marketplace and install the plugin:
+## How host projects use this
 
-```bash
-claude plugin marketplace add ekoepplin/agentic-toolbox
-claude plugin install agentic-toolbox@agentic-toolbox
-```
+Host projects **dock** the base: `make dock HOST=<path-to-host-repo>`
+scaffolds the workbench stack, and the dock step wires every harness adapter
+on each workbench start (see `docs/harnesses/dock-e2e.md`).
 
 ## Shipped skills
 

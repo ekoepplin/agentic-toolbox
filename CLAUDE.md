@@ -24,25 +24,18 @@ additions that don't belong in a framework.
 
 ## How other projects reference this
 
-Add to the project's `CLAUDE.md`:
+Host projects **dock** this base at runtime: `make dock HOST=<path>` scaffolds
+the host's workbench stack, and the dock step wires every harness adapter on
+each workbench start — shipped skills are then invocable as
+`/agentic-toolbox:<skill-name>` inside the workbench (see
+`docs/harnesses/dock-e2e.md`).
+
+For the shared behavioral guidelines, a project's `CLAUDE.md` can import this
+file:
 
 ```markdown
 @/Users/ekoepplin/repos/agentic-toolbox/CLAUDE.md
 ```
-
-To also load skills and hooks, start Claude with:
-
-```bash
-claude --plugin-dir ~/repos/agentic-toolbox
-```
-
-Or permanently via shell alias in `~/.zshrc`:
-
-```bash
-alias claude='claude --plugin-dir ~/repos/agentic-toolbox'
-```
-
-Skills are then available as `/agentic-toolbox:<skill-name>`.
 
 ## Structure
 
@@ -177,10 +170,10 @@ Single-context layout — `CONTEXT.md` + `docs/adr/` at the repo root. See `docs
 
 External skills (mattpocock/skills) are **pinned** by ref in `.devcontainer/skills.lock`; `install-skills.sh` checks out exactly that ref, so the skill set is reproducible and doesn't drift on rebuild. Bump the pin with the `/update-project` skill — it reviews the upstream skill-set diff, updates the lock, and reconciles `agentic-workflow/*` against any renamed skills. Never bump by editing the lock blindly.
 
-### Plugin drift guard
+### Adapter-manifest drift guard
 
-**Sync rule:** every shipped skill MUST be listed in both `.claude-plugin/plugin.json` and the README, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST NOT appear in `plugin.json`. This is the plugin contract (see ADR-0002) — `plugin.json` is the only thing that reaches consumers. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you add, rename, or promote a skill, update `plugin.json` **and** the README together, then run `scripts/check.sh`.
+**Sync rule:** every shipped skill MUST be listed in both `.claude-plugin/plugin.json` and the README, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST NOT appear in `plugin.json`. This is the adapter-manifest contract — `plugin.json` is the Claude Code harness adapter's manifest, and only what it lists is wired into a docked workbench. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you add, rename, or promote a skill, update `plugin.json` **and** the README together, then run `scripts/check.sh`.
 
 ### Verification
 
-This repo has **no unit-test framework**. The gate is `scripts/check.sh` — the plugin drift guard, which exits non-zero on any mismatch between `plugin.json`, the README, and the skills on disk. Run it after any change that adds, renames, or promotes a skill. This overrides the unit-test framing of the §4 examples above.
+This repo has **no unit-test framework**. The gate is `scripts/check.sh` — the adapter-manifest drift guard, which exits non-zero on any mismatch between `plugin.json`, the README, and the skills on disk. Run it after any change that adds, renames, or promotes a skill. This overrides the unit-test framing of the §4 examples above.

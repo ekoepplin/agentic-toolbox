@@ -2,7 +2,7 @@
 # upstream rather than committed. See docs/adr/0001.
 .agents/skills/
 
-# Symlinks to the vendored skill set, created by scripts/bootstrap-dev.sh for
+# Symlinks to the vendored skill set, created by .devcontainer/scripts/install-skills.sh (the dock step) for
 # this repo's own Claude sessions. Local-only, never committed. See docs/adr/0001.
 .claude/skills/
 
