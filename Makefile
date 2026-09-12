@@ -18,11 +18,18 @@ BASE_IMAGE := agentic-toolbox-base:latest
 DOCKERFILE := .devcontainer/Dockerfile
 CONTEXT    := .devcontainer
 
-.PHONY: image probe probe-dock
+.PHONY: image probe probe-dock dock
 
 # Build the base image from the base's own files only.
 image:
 	docker build -f $(DOCKERFILE) -t $(BASE_IMAGE) $(CONTEXT)
+
+# Dock a host project in one command (issue #11): generates the host's
+# three-file tree (compose.yaml, .env, .devcontainer/devcontainer.json),
+# picks a free SSH port, and builds the base image if missing.
+dock:
+	@test -n "$(HOST)" || { echo "usage: make dock HOST=<path-to-host-repo>"; exit 1; }
+	@scripts/dock-host.sh "$(HOST)"
 
 # Issue #8 acceptance probes against $(BASE_IMAGE):
 #   in-image:  both harness CLIs report a version (plus Node >= 22 for pi)
