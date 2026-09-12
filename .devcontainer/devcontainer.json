@@ -46,8 +46,9 @@
 
   // ── postCreateCommand ────────────────────────────────────────────────────────
   // Runs once after container creation (not on every start). Copies the staged
-  // SSH keys + claude.json, installs pinned external skills, registers the
-  // headroom MCP. sshd itself is started by the compose service on every start.
+  // SSH keys + claude.json, registers the headroom MCP. Harness wiring — the
+  // dock step (vendored skills, Claude Code plugin alias, pi config) plus
+  // sshd — runs on every start via the compose service command.
   "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
 
   // ── DEV SERVERS: forward via VS Code (localhost on host, no rebuild) ────────

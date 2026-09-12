@@ -4,7 +4,8 @@
 # (.devcontainer/devcontainer.json) opens VS Code into exactly this service.
 #
 #   make image              # build the base image first (issue #8)
-#   docker compose up -d    # start the workbench
+#   docker compose up -d    # start the workbench (the dock step wires every
+#                           # harness adapter on each start — issue #10)
 #   ssh -p 2224 node@localhost
 #
 # `image` must stay the Makefile's canonical BASE_IMAGE (agentic-toolbox-base:latest).
@@ -43,6 +44,9 @@ services:
       # host.docker.internal.
       - "host.docker.internal:host-gateway"
 
-    # Keep the container alive and start sshd on every start (replaces the
-    # old devcontainer's postStartCommand).
-    command: ["/bin/sh", "-c", "sudo /usr/sbin/sshd && exec sleep infinity"]
+    # Keep the container alive. sshd starts on every start (replaces the old
+    # devcontainer's postStartCommand); the dock step (issue #10) wires the
+    # docked base into every supported harness on every start — not just
+    # first creation. A dock failure is visible in the logs and retried on
+    # the next start; it never takes the workbench down.
+    command: ["/bin/sh", "-c", "sudo /usr/sbin/sshd; /Users/ekoepplin/repos/agentic-toolbox/.devcontainer/scripts/dock.sh || echo 'dock: step FAILED — workbench stays up, re-run .devcontainer/scripts/dock.sh manually'; exec sleep infinity"]
