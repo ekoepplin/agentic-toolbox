@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(claude:*)",
+      "Bash(scripts/check.sh:*)",
+      "Bash(./scripts/check.sh:*)",
+      "Bash(bash scripts/check.sh:*)"
+    ],
+    "deny": [
+      "Bash(git push -f:*)",
+      "Bash(git push --force:*)"
+    ]
+  }
+}

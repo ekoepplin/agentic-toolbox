@@ -2,7 +2,7 @@
 # upstream rather than committed. See docs/adr/0001.
 .agents/skills/
 
-# Symlinks to the vendored skill set, created by .devcontainer/scripts/install-skills.sh (the dock step) for
+# Symlinks to the vendored skill set, created by scripts/bootstrap-dev.sh for
 # this repo's own Claude sessions. Local-only, never committed. See docs/adr/0001.
 .claude/skills/
 
@@ -13,14 +13,11 @@ __pycache__/
 # Local dev-workflow aids — the Matt-Pocock pipeline harness (MATT-WORKFLOW.md +
 # ralph loop) and reference notes. Used to develop this toolbox, never shipped or
 # committed. Same rationale as the vendored skill set above (docs/adr/0001).
-agentic-workflow/
+
 
 # Ralph backend/model preferences, sourced by the ralph scripts (local dev aid)
 .env.ralph
-agentic-workflow-notes/
-blueprint-workflow.md
 
 # Pi harness local config (skill exposure via .pi/settings.json, ralph
 # guardrail extension). Local dev aid, never committed — same rationale as
-# agentic-workflow/ (docs/adr/0001).
-.pi/
+# agentic-workflow/ (docs/adr/0001)..pi/
