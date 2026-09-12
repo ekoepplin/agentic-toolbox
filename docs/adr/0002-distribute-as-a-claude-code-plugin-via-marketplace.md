@@ -1,5 +1,7 @@
 # Distribute the toolbox as a Claude Code plugin via a marketplace
 
+**Status:** superseded by [ADR-0003](0003-distribute-the-base-by-runtime-dock.md) — the plugin survives as the base's Claude Code harness adapter, but its marketplace delivery route is retired; the base is distributed exclusively by runtime dock.
+
 The toolbox exists to be **installed into other repositories** and invoked there (see "Consumer repo" in `CONTEXT.md`). We had to choose how a consumer gets these skills, agents, commands, and hooks. The options considered:
 
 - **Claude Code plugin + marketplace** — ship a `.claude-plugin/plugin.json` and a `.claude-plugin/marketplace.json`; a consumer runs `claude plugin marketplace add ekoepplin/agentic-toolbox` then installs the plugin. Skills become `/agentic-toolbox:<name>`.
