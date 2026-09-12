@@ -32,6 +32,16 @@ RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dea
     apt-get update && apt-get install -y google-cloud-cli && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# pi-docparser runtime deps (npm:pi-docparser in pi-extensions.lock):
+#   - LibreOffice (headless Writer/Calc/Impress) converts DOCX/XLSX/PPTX
+#   - Tesseract + English traineddata gives offline OCR for scanned PDFs/images
+# --no-install-recommends keeps the LibreOffice pull to the headless conversion
+# stack — no GUI/Base/Draw/Math/Java metapackages.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libreoffice-writer libreoffice-calc libreoffice-impress \
+        tesseract-ocr tesseract-ocr-eng && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # uv — fast Python package manager
 # installed as root, so copy out of /root (mode 700 — unreachable by the node
 # user at runtime) into a world-executable path
