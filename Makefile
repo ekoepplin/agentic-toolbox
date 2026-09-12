@@ -18,7 +18,7 @@ BASE_IMAGE := agentic-toolbox-base:latest
 DOCKERFILE := .devcontainer/Dockerfile
 CONTEXT    := .devcontainer
 
-.PHONY: image probe
+.PHONY: image probe probe-dock
 
 # Build the base image from the base's own files only.
 image:
@@ -59,3 +59,9 @@ probe: image
 		command -v headroom; \
 		echo "== all probes passed =="; \
 	'
+
+# Issue #10 acceptance probes against the dogfooded workbench (issue #9): the
+# dock step must have wired both harness adapters. Requires a running
+# workbench (docker compose up -d) and the base image (make image).
+probe-dock:
+	docker compose exec -T workbench bash .devcontainer/scripts/probe-dock.sh

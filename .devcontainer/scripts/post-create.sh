@@ -20,7 +20,8 @@ cp /tmp/claude.json.host /home/node/.claude.json
 cd /workspace && uv sync || true
 
 # ── External skills ──────────────────────────────────────────────────────────
-bash "$SCRIPTS_DIR/install-skills.sh"
+# The pinned external skill set is wired by the dock step (dock.sh), which
+# runs on every container start — not just this create-time hook.
 
 # ── Headroom MCP server ──────────────────────────────────────────────────────
 # Registers headroom as an MCP server in ~/.claude/settings.json so Claude Code
