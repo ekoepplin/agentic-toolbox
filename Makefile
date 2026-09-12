@@ -18,7 +18,7 @@ BASE_IMAGE := agentic-toolbox-base:latest
 DOCKERFILE := .devcontainer/Dockerfile
 CONTEXT    := .devcontainer
 
-.PHONY: image probe probe-dock dock
+.PHONY: image probe probe-dock dock dock-e2e
 
 # Build the base image from the base's own files only.
 image:
@@ -72,3 +72,12 @@ probe: image
 # workbench (docker compose up -d) and the base image (make image).
 probe-dock:
 	docker compose exec -T workbench bash .devcontainer/scripts/probe-dock.sh
+
+# Issue #12 acceptance: the dock E2E on a scratch host project — the runtime
+# gate, counterpart of the static drift guard (scripts/check.sh). One command
+# scaffolds a throwaway host, brings its workbench up, runs every probe
+# (both harness adapters, pin fidelity, dirty-base warning), and tears down
+# with no residue. Exits non-zero on any probe failure.
+# See docs/harnesses/dock-e2e.md.
+dock-e2e:
+	scripts/dock-e2e.sh
