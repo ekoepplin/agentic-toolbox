@@ -54,6 +54,15 @@
   // ── DEV SERVERS: forward via VS Code (localhost on host, no rebuild) ────────
   "forwardPorts": [3000],
 
+  // ── PORTS: never auto-forward 8000 ──────────────────────────────────────────
+  // Belt-and-suspenders with remote.autoForwardPorts:false below. VS Code
+  // auto-forwarding plants a 127.0.0.1:8000 listener that shadows the SSH
+  // tunnel to ZGX; Docker routes host.docker.internal to host loopback, so the
+  // container hits the dead VS Code forward instead of the tunnel.
+  "portsAttributes": {
+    "8000": { "onAutoForward": "ignore" }
+  },
+
   // ── MCPs — add project MCP servers here ─────────────────────────────────────
   // headroom (headroomlabs-ai/headroom) — context compression layer, 60-95% input
   //   token reduction. Installed via pip in the base image; registered via
