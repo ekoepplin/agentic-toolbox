@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# External skills installer — called by post-create.sh on container creation.
+# External skills installer — called by the dock step (dock.sh) on every
+# workbench start, and by scripts/bootstrap-dev.sh after a fresh clone.
 #
 # Skill repos are PINNED. The pinned ref (commit SHA or tag) for each repo lives
 # in .devcontainer/skills.lock, so a devcontainer rebuild always reproduces the
@@ -38,18 +39,36 @@ pin_for() {
 # Clone (if needed) and check out an exact pinned ref. Full clone (not shallow)
 # so any historical SHA or tag is checkoutable, and never `git pull` — the pin,
 # not upstream HEAD, decides what is installed.
+#
+# Pin-aware: when the clone exists and its HEAD already is the pinned ref, no
+# network traffic happens at all (the ref resolves locally — pins are commit
+# SHAs or tags, per the skills.lock format). Fetch + re-checkout only when the
+# clone is missing or the pin changed.
+# safe.directory: the repo may be owned by a different uid than the caller
+# (base mounted across the container/host boundary).
+git_repo() { git -c safe.directory="$AGENTS_DIR/$1" -C "$AGENTS_DIR/$1" "${@:2}"; }
 clone_at_ref() {
   local name="$1" url="$2" ref="$3"
   local dir="$AGENTS_DIR/$name"
-  if [ -d "$dir/.git" ]; then
-    echo "  ↻ $name (fetching)"
-    git -C "$dir" fetch --quiet --tags --force origin
-  else
+  if [ ! -d "$dir/.git" ]; then
     echo "  ↓ $name (cloning)"
     git clone --quiet "$url" "$dir"
+  else
+    local want have
+    want="$(git_repo "$name" rev-parse -q --verify "$ref^{commit}" 2>/dev/null || true)"
+    have="$(git_repo "$name" rev-parse HEAD 2>/dev/null || true)"
+    if [ -n "$want" ] && [ "$want" = "$have" ]; then
+      echo "  ✓ $name (pin $ref satisfied — no fetch)"
+      return 0
+    fi
+    echo "  ↻ $name (fetching — pin $ref not satisfied)"
+    git_repo "$name" fetch --quiet --tags --force origin
+    if ! git_repo "$name" rev-parse -q --verify "$ref^{commit}" >/dev/null 2>&1; then
+      echo "  ! pin '$ref' not resolvable in $name after fetch" >&2
+    fi
   fi
   echo "  ⇲ $name → $ref"
-  git -C "$dir" -c advice.detachedHead=false checkout --quiet "$ref"
+  git_repo "$name" -c advice.detachedHead=false checkout --quiet "$ref"
 }
 
 # Remove symlinks whose target no longer exists — i.e. skills renamed or dropped
@@ -75,7 +94,10 @@ for dir in "$AGENTS_DIR/mattpocock-skills/skills"/*/*/; do
   [ -f "${dir}SKILL.md" ] || continue
   [ "$(basename "$(dirname "$dir")")" = "deprecated" ] && continue
   skill_name="$(basename "$dir")"
-  ln -sfn "$dir" "$CLAUDE_SKILLS_DIR/$skill_name"
+  link="$CLAUDE_SKILLS_DIR/$skill_name"
+  # No-op when the symlink already points at this target (second run).
+  [ -L "$link" ] && [ "$(readlink "$link")" = "$dir" ] && continue
+  ln -sfn "$dir" "$link"
   echo "  ✓ $skill_name"
 done
 
