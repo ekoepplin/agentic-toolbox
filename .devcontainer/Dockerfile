@@ -77,7 +77,10 @@ RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
     chown -R 1000:1000 /home/node/.npm
 
 # ccstatusline — Claude Code status line (sirmalloc/ccstatusline)
-RUN npm install -g ccstatusline
+# chown: this root-level install re-populates /home/node/.npm; without the chown
+# the cache is left root-owned and later `npm install` as node fails with EACCES.
+RUN npm install -g ccstatusline && \
+    chown -R 1000:1000 /home/node/.npm
 
 # Playwright Chromium + system deps — pinned to match @playwright/test in package.json
 RUN npx -y playwright@1.58.2 install --with-deps chromium && \

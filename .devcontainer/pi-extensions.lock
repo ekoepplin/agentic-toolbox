@@ -1,0 +1,17 @@
+# Pinned pi extension packages. install-pi-extensions.sh runs `pi install` for
+# each entry on every workbench start (called by dock.sh), so a rebuild
+# reproduces exactly this set — the pi analogue of skills.lock.
+#
+# Format (one source per line, same grammar pi install accepts):
+#   npm:<name>@<version>            pinned npm package
+#   git:<host>/<user>/<repo>@<ref>  pinned git source
+# Bump a version by editing its line; check the pi.dev package page or npm first.
+npm:pi-mcp-adapter@2.33.0
+npm:pi-web-access@0.29.0
+npm:pi-subagents@0.67.0
+npm:pi-clear@0.1.1
+npm:remote-pi@0.7.0
+
+# Optional companion for remote-pi: native mobile rendering of ask_user prompts.
+# Uncomment to enable.
+# npm:@eko24ive/pi-ask@1.2.0

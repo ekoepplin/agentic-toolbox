@@ -5,8 +5,11 @@ Add the [pi coding agent](https://pi.dev/) and a pinned-extension mechanism to t
 **shipped as the dock step** (issue #10) — the container-specific config seeding
 (the `~/.pi/agent/` `models.json` + `settings.json` with the base's skill paths)
 lives in `.devcontainer/scripts/dock.sh` and runs on every workbench start, not
-just creation. The pinned-extension lock mechanism (this plan's changes 2–3)
-was not implemented and is deferred.
+just creation. The pinned-extension lock mechanism (this plan's changes 2–3) is
+now **shipped**: `.devcontainer/pi-extensions.lock` (pinned `npm:`/`git:`
+sources) + `.devcontainer/scripts/install-pi-extensions.sh`, which dock.sh runs
+after the config seed so `pi install` reproduces the same extension set on every
+rebuild.
 
 ## Decisions (agreed)
 
