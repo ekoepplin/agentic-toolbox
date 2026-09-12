@@ -21,3 +21,7 @@ __pycache__/
 # Pi harness local config (skill exposure via .pi/settings.json, ralph
 # guardrail extension). Local dev aid, never committed — same rationale as
 # agentic-workflow/ (docs/adr/0001)..pi/
+
+# remote-pi writes per-machine runtime state (agent name, relay toggle) here;
+# it appears in the repo only because the base is bind-mounted into the container.
+.pi/remote-pi/
