@@ -4,6 +4,27 @@ Append-only. Most recent at top.
 
 ---
 
+## 2026-09-13 — pi + local vLLM/SGLang model routing
+
+### pi's model `id` is the wire name — it must equal the server's `data[].id`
+`pi --provider vllm-hpzgx --model qwen` returned `404: The model 'qwen' does not
+exist`. Cause: in `~/.pi/agent/models.json`, a model's `id` field is sent
+verbatim as the OpenAI `"model"` param. The config had `id: "qwen"`, but the
+backend had been swapped (`start-local-setup --flashnext`) and now serves the
+model as `qwen3.8-flash-next-a5b`. A server-side rename
+(`--served-model-name qwen`) wasn't clean here because the flashnext launcher
+wraps an upstream `serve.sh` that hardcodes the served name.
+
+**Rule:** the `id` you pass to `--model` must match `curl -s
+localhost:8000/v1/models | jq -r '.data[].id'`. When a host serves different
+models on the same port at different times, register one model entry per served
+`id` under the provider in `~/.pi/agent/models.json`, and pass whichever
+`--model` matches what's currently live. Provider-level `baseUrl`/`compat`
+(e.g. `thinkingFormat: "qwen"`) is shared across the entries. See
+`docs/harnesses/pi-agent-harness/connecting-local-models.md`.
+
+---
+
 ## 2026-09-12 — editing a live agent's runtime config races the agent
 
 Hand-edited `.pi/remote-pi/config.json` (`auto_start_relay` toggle) while pi
