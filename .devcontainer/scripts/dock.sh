@@ -114,12 +114,20 @@ def seed_models(d):
         "models": [
             {
                 "id": "qwen",
-                "name": "HP-ZGX qwen (local)",
+                "name": "HP-ZGX qwen (local — qwen38 or nvfp4 backend)",
                 "reasoning": True,
                 "contextWindow": 262144,
                 "maxTokens": 32000,
                 "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-            }
+            },
+            {
+                "id": "qwen3.8-flash-next-a5b",
+                "name": "HP-ZGX Qwen3.8-Flash-Next 125B-A5B (local)",
+                "reasoning": True,
+                "contextWindow": 262144,
+                "maxTokens": 32000,
+                "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+            },
         ],
     }
     d["providers"] = providers

@@ -321,7 +321,9 @@ the issue on push.
 ## References
 
 - [connecting-local-models.md](./connecting-local-models.md) — endpoint + provider registration (this doc's prerequisite)
+- [configuration.md](./configuration.md) — pi's config files (`models.json`, `settings.json`), host vs docked-container seeding, adding config that survives a dock
 - [devcontainer-pi-support-plan.md](./devcontainer-pi-support-plan.md) — pi in the devcontainer (seeded `models.json`, pinned extensions)
+- [pi-extensions.md](./pi-extensions.md) — the pinned extension set + per-extension caveats (e.g. voice mic bridge)
 - `agentic-workflow/MATT-WORKFLOW.md` — the pipeline this executes
 - `agentic-workflow/ralph/{once.sh,afk.sh,prompt.md}` — the Claude Code loop this ports
 - pi docs: <https://pi.dev/docs/latest/usage> (modes & flags), <https://pi.dev/docs/latest/skills>, <https://pi.dev/docs/latest/extensions> (`tool_call`), <https://pi.dev/docs/latest/security>
