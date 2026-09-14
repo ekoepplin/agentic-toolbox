@@ -42,6 +42,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tesseract-ocr tesseract-ocr-eng && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Runtime dep for the pinned pi-voice-stt extension (pi-extensions.lock):
+#   - ffmpeg captures the microphone to a temporary WAV before transcription
+# Note: the workbench is headless and has no audio device, so in-container
+# capture requires either a forwarded /dev/snd or pi-voice-stt's host→SSH mic
+# bridge; ffmpeg is the decode/capture tool the extension shells out to.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ffmpeg && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # uv — fast Python package manager
 # installed as root, so copy out of /root (mode 700 — unreachable by the node
 # user at runtime) into a world-executable path
