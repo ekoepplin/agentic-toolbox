@@ -35,7 +35,9 @@ SSH, and blocks until a real generation succeeds:
 
 ```bash
 start-local-setup            # default --qwen38: SGLang Qwen3.8-27B NVFP4 on :8000
-# other backends: --dflash (vLLM AEON DFlash), --vllm, --fp8 (:8004), --ollama (:11434)
+# other backends (all on :8000, one at a time — the shared GPU slot):
+#   --flashnext  vLLM Qwen3.8-Flash-Next 125B-A5B INT4  (served as qwen3.8-flash-next-a5b)
+#   --nvfp4      vLLM Qwen3.6-35B-A3B-NVFP4 + MTP        (served as qwen)
 start-local-setup --status   # report only, start nothing
 ```
 
@@ -62,6 +64,24 @@ model**: it returns a separate `reasoning_content` field, so mark it
 `"reasoning": true` and set `"compat": { "thinkingFormat": "qwen" }` on the
 provider — see the config below.)
 
+#### Backend → served wire-name → pi model `id`
+
+`start-local-setup` swaps backends on the one shared port. **The `id` you give a
+pi model must equal the server's `--served-model-name`** — a mismatch is a bare
+404 (the model-id-is-wire-name lesson). Current mapping:
+
+| `start-local-setup` flag | Underlying model | Served wire-name = pi model `id` |
+|---|---|---|
+| `--qwen38` (default) | Qwen3.8-27B NVFP4 + DSpark (SGLang) | `qwen` |
+| `--nvfp4` | Qwen3.6-35B-A3B-NVFP4 + MTP (vLLM) | `qwen` |
+| `--flashnext` | Qwen3.8-Flash-Next 125B-A5B INT4 (vLLM) | `qwen3.8-flash-next-a5b` |
+
+Both `--qwen38` and `--nvfp4` serve under the wire-name `qwen`, so the single
+`qwen` entry below already routes to whichever of the two is up — a second entry
+is neither needed nor possible (pi routes by wire-name, and only one backend
+serves at a time). `--flashnext` serves under its own name, so it takes its own
+entry. All three are reasoning models with a 262144-token context.
+
 ### 2. Register the provider
 
 Add to `~/.pi/agent/models.json`:
@@ -81,7 +101,7 @@ Add to `~/.pi/agent/models.json`:
       "models": [
         {
           "id": "qwen",
-          "name": "HP-ZGX qwen (local)",
+          "name": "HP-ZGX qwen (local — qwen38 or nvfp4 backend)",
           "reasoning": true,
           "contextWindow": 262144,
           "maxTokens": 32000,
