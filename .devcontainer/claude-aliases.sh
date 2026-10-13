@@ -187,3 +187,10 @@ claude-qwen38() {
   API_TIMEOUT_MS=3600000 \
    claude --model qwen --dangerously-skip-permissions "$@"
 }
+# pi commits as the datadidact-bot identity. Scoped to the pi process only,
+# so git commits made from the shell itself keep the personal identity.
+pi() {
+  GIT_AUTHOR_NAME=datadidact-bot GIT_AUTHOR_EMAIL=info@datadidact.com \
+  GIT_COMMITTER_NAME=datadidact-bot GIT_COMMITTER_EMAIL=info@datadidact.com \
+  command pi "$@"
+}
