@@ -29,6 +29,8 @@ git_base() { git -c safe.directory="$BASE_DIR" -C "$BASE_DIR" "$@"; }
 
 echo "dock: base at $BASE_DIR"
 
+sudo /usr/local/bin/fix-docker-socket.sh || echo "dock: WARNING — fix-docker-socket.sh failed; docker CLI may lack socket access" >&2
+
 # ── 1. Dirty-base warning ────────────────────────────────────────────────────
 if git_base rev-parse --git-dir >/dev/null 2>&1; then
   dirty="$(git_base status --porcelain)"

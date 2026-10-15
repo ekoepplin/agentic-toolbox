@@ -60,7 +60,7 @@ Resolution order for both `--backend` and `--model`:
 2. **`.env.ralph`** in the repo root — `RALPH_BACKEND=vllm`, `RALPH_MODEL=qwen` (see `.env.ralph.example`)
 3. **Built-in default** — `vllm` + `$VLLM_DEFAULT_MODEL` (which is `qwen` in this devcontainer)
 
-The scripts set `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` themselves, so you don't need to be inside a `claude-vllm` / `claude-zgx` wrapper session — a plain shell works.
+The scripts set `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` themselves, so you don't need to be inside a `claude-vllm` / `claude-qwen38` wrapper session — a plain shell works.
 
 ### Examples
 
@@ -109,6 +109,6 @@ When ralph (or you) hits a hard bug, drop into `/diagnosing-bugs` — reproduce 
 - `agentic-workflow/ralph/once.sh` runs `claude` with `--permission-mode acceptEdits` so the agent writes/edits without prompting. It also passes `--settings agentic-workflow/ralph/settings.ralph.json` **only if that file exists** — create one to allow-list the `git`/`gh`/`claude` commands ralph needs so an AFK loop doesn't stall on permission prompts. Make sure the issue scope is what you want before launching.
 - `afk.sh` exits when `gh issue view <n>` reports `state == "CLOSED"`, or after `max-iters` (default 10). Ctrl-C otherwise.
 - The script logs the resolved backend + model at start of each iteration: `ralph: backend=vllm model=qwen issue=#2`. Quick way to confirm routing.
-- Local-backend (`vllm` / `ollama`) requires the HP-ZGX SSH tunnel to be up. Diagnose with `check-vllm` / `check-ollama` (defined in `.devcontainer/claude-aliases.sh`).
+- Local-backend (`vllm` / `ollama`) requires the HP-ZGX SSH tunnel to be up. Diagnose with `check-vllm` (defined in `.devcontainer/claude-aliases.sh`; Ollama on HP-ZGX is retired, so the `ollama` backend only works against another Ollama endpoint).
 - Feedback gates are this plugin repo's own: `scripts/check.sh` (the `plugin.json`/README drift guard, once issue #5 lands) plus a `claude --plugin-dir .` load check. There is no build step, no `make`, and no unit-test framework — the plugin-load smoke-check is the behavioural check.
 - The kanban board is not wired into ralph — there is no `move-issue.sh` in this repo, so move cards by hand.

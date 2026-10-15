@@ -32,6 +32,10 @@ services:
       # Agent logs + scratch space (survive container rebuilds).
       - ${HOME}/agent-logs:/home/node/agent-logs:cached
       - ${HOME}/agent-work:/home/node/agent-work
+      # Mac host's Docker socket (docker-outside-of-docker) — lets the
+      # in-container docker CLI talk to the host daemon (e.g. `vercel dev`
+      # container builds). fix-docker-socket.sh (dock.sh) matches the gid.
+      - /var/run/docker.sock:/var/run/docker.sock
 
     ports:
       # SSH on all interfaces so Tailscale/mobile traffic reaches sshd.

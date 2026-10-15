@@ -12,6 +12,9 @@ npm:pi-subagents@0.67.0
 npm:remote-pi@0.7.0
 npm:pi-docparser@4.0.0
 npm:pi-voice-stt@0.7.0
+# Aligned with the Mac's pi packages (dotfiles pi/agent/settings.json):
+npm:pi-context@2.3.0
+npm:pi-powerline-footer@0.20.1
 
 # Optional companion for remote-pi: native mobile rendering of ask_user prompts.
 # Uncomment to enable.

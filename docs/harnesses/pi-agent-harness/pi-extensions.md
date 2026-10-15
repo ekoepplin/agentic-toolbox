@@ -21,6 +21,8 @@ caveats.
 | `remote-pi` | remote session bridge | — |
 | `pi-docparser` | DOCX/XLSX/PPTX + scanned-PDF/image parsing | LibreOffice (headless), Tesseract OCR |
 | `pi-voice-stt` | voice dictation into the pi TUI | `ffmpeg` |
+| `pi-context` | agentic context management | — |
+| `pi-powerline-footer` | powerline-style status bar | — (a Nerd Font in the client terminal for the glyphs) |
 
 ## pi-voice-stt (voice dictation)
 
