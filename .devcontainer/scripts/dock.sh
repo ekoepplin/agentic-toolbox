@@ -15,6 +15,10 @@
 #      provider (host.docker.internal, seeded, never bind-mounted) and the
 #      base's skill paths.
 #
+# Before step 1 it syncs the staged SSH authorized_keys and seeds claude.json —
+# post-create.sh only runs under VS Code, so a `docker compose up` workbench
+# would otherwise come up with no SSH keys.
+#
 # Runs as the container user (node). Everything it writes is container-local
 # or inside the base's git-ignored paths — it never touches host state.
 set -euo pipefail
@@ -30,6 +34,24 @@ git_base() { git -c safe.directory="$BASE_DIR" -C "$BASE_DIR" "$@"; }
 echo "dock: base at $BASE_DIR"
 
 sudo /usr/local/bin/fix-docker-socket.sh || echo "dock: WARNING — fix-docker-socket.sh failed; docker CLI may lack socket access" >&2
+
+# ── Staged host files ────────────────────────────────────────────────────────
+# authorized_keys: synced every start — the host file is the source of truth,
+# and the bind mount has the wrong ownership for sshd, so copy, don't link.
+# claude.json: seeded only if missing — afterwards it holds container-side
+# state (trusted projects, sessions) that a re-copy would clobber.
+if [ -f /tmp/container_authorized_keys ]; then
+  mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+  cp /tmp/container_authorized_keys "$HOME/.ssh/authorized_keys"
+  chmod 600 "$HOME/.ssh/authorized_keys"
+  echo "dock: SSH authorized_keys synced"
+else
+  echo "dock: WARNING — no staged /tmp/container_authorized_keys; SSH login will fail" >&2
+fi
+if [ -f /tmp/claude.json.host ] && [ ! -f "$HOME/.claude.json" ]; then
+  cp /tmp/claude.json.host "$HOME/.claude.json"
+  echo "dock: claude.json seeded"
+fi
 
 # ── 1. Dirty-base warning ────────────────────────────────────────────────────
 if git_base rev-parse --git-dir >/dev/null 2>&1; then

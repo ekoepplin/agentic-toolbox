@@ -74,8 +74,14 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 
 # Python venv for skill dependencies → /opt/venv  (on PATH for all users)
 # Used by: fetch-news-local, fetch-free-images-local, web-search-local, headroom
-RUN uv venv /opt/venv && \
-    uv pip install --python /opt/venv/bin/python \
+# Longer timeout + fewer parallel downloads: headroom's multi-GB wheels otherwise
+# saturate slow links and starve smaller requests into "operation timed out".
+# --torch-backend cpu: headroom-ai and sentence-transformers need torch, but the
+# default PyPI wheel on linux/arm64 drags in ~19 CUDA/NVIDIA/Triton packages
+# (several GB) that can never run here — the workbench has no NVIDIA GPU.
+RUN export UV_HTTP_TIMEOUT=300 UV_CONCURRENT_DOWNLOADS=4 && \
+    uv venv /opt/venv && \
+    uv pip install --python /opt/venv/bin/python --torch-backend cpu \
         newsapi-python \
         loguru \
         duckdb \
@@ -139,6 +145,10 @@ COPY --chown=node:node tmux.conf /home/node/.tmux.conf
 COPY --chown=node:node tmux.zsh /etc/tmux.zsh
 RUN echo '. /etc/tmux.zsh' >> /home/node/.zshrc && \
     mkdir -p /home/node/.ssh && chmod 700 /home/node/.ssh && chown node:node /home/node/.ssh
+
+# Ghostty terminfo: Debian's ncurses-term ships the entry as `ghostty` only, but
+# Ghostty sets TERM=xterm-ghostty — alias it so vim/htop/less work over SSH.
+RUN ln -s ../g/ghostty /usr/share/terminfo/x/xterm-ghostty
 
 USER node
 WORKDIR /workspace
