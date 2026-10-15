@@ -163,10 +163,10 @@ services:
       - \${BASE_PATH}:\${BASE_PATH}
       # Host Claude config (settings, sessions, memory).
       - \${HOME}/.claude:/home/node/.claude
-      # Staged read-only; post-create copies it to /home/node/.claude.json
+      # Staged read-only; the dock step seeds /home/node/.claude.json from it
       # (avoids racing with the Mac's Claude Code).
       - \${HOME}/.claude.json:/tmp/claude.json.host:ro
-      # Staged SSH authorized_keys; post-create copies it into
+      # Staged SSH authorized_keys; the dock step syncs it into
       # /home/node/.ssh/ (the bind mount has wrong ownership for sshd).
       - \${HOME}/.ssh/container_authorized_keys:/tmp/container_authorized_keys
       # Agent logs + scratch space (survive container rebuilds).
