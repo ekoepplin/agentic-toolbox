@@ -34,7 +34,9 @@ dock:
 # Issue #8 acceptance probes against $(BASE_IMAGE):
 #   in-image:  both harness CLIs report a version (plus Node >= 22 for pi)
 #   regression: sshd config (internal port, key-only, single user), tmux, gh,
-#               duckdb, and the skill-dependency venv are all still present.
+#               duckdb, and the skill-dependency venv are all still present;
+#               Ghostty-over-SSH shell: xterm-ghostty terminfo, zsh login
+#               shell, Powerlevel10k theme; torch is the CPU-only build.
 probe: image
 	docker run --rm $(BASE_IMAGE) /bin/sh -c ' \
 		set -e; \
@@ -55,6 +57,14 @@ probe: image
 		echo "sshd: Port 2222, key-only, AllowUsers node"; \
 		echo "-- tmux --"; \
 		tmux -V; \
+		echo "-- terminal + shell (Ghostty over SSH) --"; \
+		infocmp xterm-ghostty >/dev/null \
+			|| { echo "FATAL: no xterm-ghostty terminfo"; exit 1; }; \
+		[ "$$(getent passwd node | cut -d: -f7)" = /bin/zsh ] \
+			|| { echo "FATAL: node login shell is not zsh"; exit 1; }; \
+		grep -qx "ZSH_THEME=.powerlevel10k/powerlevel10k." /home/node/.zshrc \
+			|| { echo "FATAL: Powerlevel10k is not the zsh theme"; exit 1; }; \
+		echo "terminal: xterm-ghostty terminfo, zsh login shell, Powerlevel10k"; \
 		echo "-- gh --"; \
 		gh --version | head -n1; \
 		echo "-- duckdb --"; \
@@ -64,6 +74,7 @@ probe: image
 		echo "-- skill-dependency venv --"; \
 		/opt/venv/bin/python -c "import newsapi, loguru, duckdb, tavily, requests; print(\"venv: skill deps importable\")"; \
 		command -v headroom; \
+		/opt/venv/bin/python -c "import torch, sys; sys.exit(\"FATAL: torch is a CUDA build\") if torch.version.cuda else print(\"venv: torch is CPU-only\")"; \
 		echo "== all probes passed =="; \
 	'
 

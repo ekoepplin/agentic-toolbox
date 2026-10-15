@@ -71,6 +71,13 @@ assert sys.argv[2] + "/.agents/skills" in skills, "vendored path not seeded"
 print("pi: base skill paths seeded in settings.json")
 PY
 
+# ── SSH keys: synced from the staged host file ───────────────────────────────
+cmp -s /tmp/container_authorized_keys "$HOME/.ssh/authorized_keys" \
+  || { echo "FATAL: authorized_keys not synced from the staged host file"; exit 1; }
+[ "$(stat -c %a "$HOME/.ssh/authorized_keys")" = 600 ] \
+  || { echo "FATAL: authorized_keys is not mode 600 (sshd would reject it)"; exit 1; }
+echo "ssh: authorized_keys synced from the staged host file (mode 600)"
+
 # ── Idempotency: a second dock run is a no-op ────────────────────────────────
 pin="$(sed -n 's/^mattpocock-skills[[:space:]]*=[[:space:]]*\([^[:space:]#]*\).*/\1/p' "$BASE/.devcontainer/skills.lock" | head -n1)"
 second="$(bash "$BASE/.devcontainer/scripts/dock.sh")"
