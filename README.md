@@ -33,6 +33,10 @@ ssh -p <SSH_PORT> node@localhost
 - **Ghostty** works out of the box: the image (Debian 13 trixie) ships its
   terminfo, aliased as `xterm-ghostty`, so `less`, `tmux` and other TUIs
   behave without overriding `TERM`.
+- **Shell** — zsh with Oh My Zsh and Powerlevel10k; on SSH login a tmux session
+  picker opens. The prompt config `.devcontainer/p10k.zsh` is a copy of the
+  Mac's `~/.p10k.zsh` — re-copy it after `p10k configure` on the Mac, then
+  `make image`.
 - The SSH port is published on all interfaces (for Tailscale/mobile access);
   key-only auth is what protects it.
 

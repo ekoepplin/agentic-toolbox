@@ -150,5 +150,21 @@ RUN echo '. /etc/tmux.zsh' >> /home/node/.zshrc && \
 # Ghostty sets TERM=xterm-ghostty — alias it so vim/htop/less work over SSH.
 RUN ln -s ../g/ghostty /usr/share/terminfo/x/xterm-ghostty
 
+# Login shell → zsh. The node image defaults to bash, so SSH sessions skipped the
+# whole zsh setup above (Oh My Zsh, plugins, tmux picker).
+RUN usermod -s /bin/zsh node
+
+# Powerlevel10k prompt, pinned to the Mac's version, with the Mac's lean config
+# (p10k.zsh = a copy of ~/.p10k.zsh). gitstatus/install pre-fetches gitstatusd so
+# the first prompt needs no download. Instant prompt stays off: it can't coexist
+# with the tmux picker's console output during zsh init.
 USER node
+RUN git clone --depth 1 --branch v1.20.0 https://github.com/romkatv/powerlevel10k.git \
+        /home/node/.oh-my-zsh/custom/themes/powerlevel10k && \
+    /home/node/.oh-my-zsh/custom/themes/powerlevel10k/gitstatus/install && \
+    sed -i 's|^ZSH_THEME=.*|ZSH_THEME="powerlevel10k/powerlevel10k"|' /home/node/.zshrc
+COPY --chown=node:node p10k.zsh /home/node/.p10k.zsh
+RUN echo '[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh' >> /home/node/.zshrc && \
+    echo 'typeset -g POWERLEVEL9K_INSTANT_PROMPT=off' >> /home/node/.zshrc
+
 WORKDIR /workspace
