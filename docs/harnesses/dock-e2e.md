@@ -38,6 +38,10 @@ The command:
      `skill:web-search-local` (base shipped) and `skill:code-review`
      (vendored);
    - the base's skill paths are seeded in pi's container config;
+   - SSH keys are synced — `authorized_keys` matches the staged host file
+     (`~/.ssh/container_authorized_keys`) and is mode 600, so a
+     `docker compose up` workbench accepts SSH logins without VS Code's
+     `post-create.sh`;
    - a second dock run is a no-op (pin satisfied, container state in sync).
 4. **Verifies pin fidelity** — the vendored set's HEAD equals the ref pinned
    in `.devcontainer/skills.lock`.
