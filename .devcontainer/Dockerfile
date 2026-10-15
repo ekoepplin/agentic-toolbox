@@ -1,11 +1,11 @@
-# node:22-slim — pi requires Node >= 22.19.0; nothing else in the image pins Node 20.
+# node:22-trixie-slim — Debian 13 (ncurses 6.5 ships xterm-ghostty terminfo). pi requires Node >= 22.19.0; nothing else in the image pins Node 20.
 # No --platform pin: the base image is a local artifact, built for the host
 # architecture it will run on (make image).
-FROM node:22-slim
+FROM node:22-trixie-slim
 
 # Install system packages — openssh-server + tmux + fzf enable mobile SSH access
 RUN apt-get update && apt-get install -y python3 python3-pip python3-venv wget unzip curl git zsh \
-    openssh-server tmux fzf sudo && \
+    openssh-server tmux fzf sudo ncurses-term gpg make && \
     mkdir -p /etc/apt/keyrings && \
     wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg && \
     chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
@@ -31,6 +31,21 @@ RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dea
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list && \
     apt-get update && apt-get install -y google-cloud-cli && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Docker CLI only (docker-outside-of-docker) — talks to the Mac host's daemon
+# via the mounted /var/run/docker.sock (compose volume), no nested dockerd.
+# fix-docker-socket.sh (run every start by dock.sh) matches `node` into the
+# socket's gid since it varies per host Docker install.
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && apt-get install -y docker-ce-cli && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    echo "node ALL=(ALL) NOPASSWD: /usr/local/bin/fix-docker-socket.sh" >> /etc/sudoers
+
+COPY fix-docker-socket.sh /usr/local/bin/fix-docker-socket.sh
+RUN chmod 0755 /usr/local/bin/fix-docker-socket.sh
 
 # pi-docparser runtime deps (npm:pi-docparser in pi-extensions.lock):
 #   - LibreOffice (headless Writer/Calc/Impress) converts DOCX/XLSX/PPTX
@@ -87,12 +102,12 @@ SHELL ["/bin/zsh", "-c"]
 
 # Claude Code CLI → /usr/local/lib/node_modules/@anthropic-ai/claude-code  (global npm)
 USER root
-RUN npm install -g @anthropic-ai/claude-code && \
+RUN npm install -g @anthropic-ai/claude-code@2.1.296 && \
     chown -R 1000:1000 /home/node/.npm
 
 # pi coding agent CLI → /usr/local/lib/node_modules/@earendil-works/pi-coding-agent (global npm)
 # --ignore-scripts: pi's documented npm install path (no lifecycle scripts needed)
-RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.2.0 && \
     chown -R 1000:1000 /home/node/.npm
 
 # ccstatusline — Claude Code status line (sirmalloc/ccstatusline)

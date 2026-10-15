@@ -15,10 +15,9 @@
 #                                    compose stack interpolates both
 #   .devcontainer/devcontainer.json  the thin devcontainer wrapper
 #
-# It picks the next free SSH port (no collision with running devcontainers —
-# any port published by a running container — nor with anything else
-# listening on the Mac) and ensures the base image exists, building it if
-# missing (via the Makefile, the canonical builder).
+# It picks the next free SSH port — one no other workbench owns, running or
+# not (see "Next free SSH port" below) — and ensures the base image exists,
+# building it if missing (via the Makefile, the canonical builder).
 #
 #   usage: scripts/dock-host.sh [host-repo-path]     (default: current dir)
 #            or:  make dock HOST=<path-to-host-repo>
@@ -69,16 +68,52 @@ if [ -n "$existing" ]; then
 fi
 
 # ── Next free SSH port ──────────────────────────────────────────────────────
-# The base's own workbench publishes 2224; a host takes the first free port
-# at or above it. A port is taken when any running container publishes it
-# (the running devcontainers / workbenches all publish their SSH port via
-# compose) or when anything listens on it on the Mac. A false "taken" only
-# costs a slightly higher port.
+# A host takes the first free port at or above 2224. A port is taken when it
+# is owned by any workbench, whether or not that workbench is running now —
+# a stopped one gets its port back on its next `docker compose up`:
+#   - the base's own workbench (the port published in its compose.yaml);
+#   - another docked host's committed .env (SSH_PORT=). Hosts are found as
+#     siblings of the base's Mac path and through the compose working_dir
+#     label of every container, running or stopped;
+#   - any container, running or stopped, that binds it;
+#   - anything listening on it on the Mac.
+# A false "taken" only costs a slightly higher port.
+claimed_ports() {
+  # The base's own workbench: "<host>:<port>:2222" in its compose.yaml.
+  grep -oE ':[0-9]+:2222"' "$BASE_DIR/compose.yaml" 2>/dev/null \
+    | grep -oE '^:[0-9]+' | tr -d ':' || true
+
+  local ids
+  ids="$(docker ps -aq)"
+  if [ -n "$ids" ]; then
+    # Configured bindings, so stopped containers count too (`docker ps`
+    # only lists the ports of running ones).
+    # shellcheck disable=SC2086
+    docker inspect --format \
+      '{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{.HostPort}} {{end}}{{end}}' \
+      $ids 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+$' || true
+  fi
+
+  # Docked hosts' committed .env files (never the host being docked).
+  {
+    for env in "$(dirname "$BASE_DIR")"/*/.env; do printf '%s\n' "$env"; done
+    if [ -n "$ids" ]; then
+      # shellcheck disable=SC2086
+      docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' \
+        $ids 2>/dev/null | grep -v '^$' | sed 's|$|/.env|' || true
+    fi
+  } | sort -u | while IFS= read -r env; do
+    [ -f "$env" ] || continue
+    [ "$(cd "$(dirname "$env")" && pwd -P)" = "$(cd "$HOST_DIR" && pwd -P)" ] && continue
+    sed -n 's/^SSH_PORT=\([0-9][0-9]*\).*/\1/p' "$env"
+  done
+}
+
+CLAIMED="$(claimed_ports | sort -un)"
+
 port_taken() {
-  local p="$1" published
-  published="$(docker ps --format '{{.Ports}}' \
-    | grep -oE ':[0-9]+->' | tr -d ':-' | sort -u || true)"
-  if printf '%s\n' "$published" | grep -qx "$p"; then return 0; fi
+  local p="$1"
+  if printf '%s\n' "$CLAIMED" | grep -qx "$p"; then return 0; fi
   if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then return 0; fi
   return 1
 }
@@ -137,6 +172,7 @@ services:
       # Agent logs + scratch space (survive container rebuilds).
       - \${HOME}/agent-logs:/home/node/agent-logs:cached
       - \${HOME}/agent-work:/home/node/agent-work
+      - /var/run/docker.sock:/var/run/docker.sock
 
     ports:
       # SSH on all interfaces so Tailscale/mobile traffic reaches sshd.

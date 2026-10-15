@@ -22,9 +22,10 @@
   // ============================================================================
   // AGENTS — Local LLM routing (project-specific model preferences)
   // ============================================================================
-  // Agent 1 (Ollama): claude-zgx  → host.docker.internal:11434 via SSH tunnel
-  // Agent 2 (vLLM):   claude-vllm → host.docker.internal:8000  via SSH tunnel
-  // Agent 3 (Cloud):  claude-anthropic → Anthropic API (no env vars needed)
+  // HP-ZGX (host.docker.internal:8000 via the Mac's SSH tunnel; Ollama :11434 retired):
+  //   claude-qwen38 | claude-nvfp4 | claude-flashnext | claude-vllm, pi-zgx | pi-flashnext
+  //   (defined in .devcontainer/claude-aliases.sh; diagnose with check-vllm)
+  // Cloud: plain claude / pi → Anthropic API
   // ============================================================================
   "remoteEnv": {
     // ── PROJECT: preferred models for this project ────────────────────────────
