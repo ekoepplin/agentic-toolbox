@@ -176,8 +176,8 @@ External skills (mattpocock/skills) are **pinned** by ref in `.devcontainer/skil
 
 ### Adapter-manifest drift guard
 
-**Sync rule:** every shipped skill MUST be listed in both `.claude-plugin/plugin.json` and the README, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST NOT appear in `plugin.json`. This is the adapter-manifest contract — `plugin.json` is the Claude Code harness adapter's manifest, and only what it lists is wired into a docked workbench. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you add, rename, or promote a skill, update `plugin.json` **and** the README together, then run `scripts/check.sh`.
+**Sync rule:** every shipped skill MUST be listed in `.claude-plugin/plugin.json`, and nothing listed may be missing on disk; draft skills under `skills/in-progress/` MUST NOT appear in `plugin.json`. This is the adapter-manifest contract — `plugin.json` is the Claude Code harness adapter's manifest, and only what it lists is wired into a docked workbench. `scripts/check.sh` enforces the invariant and exits non-zero on any drift. When you add, rename, or promote a skill, update `plugin.json`, then run `scripts/check.sh`.
 
 ### Verification
 
-This repo has **no unit-test framework**. The gate is `scripts/check.sh` — the adapter-manifest drift guard, which exits non-zero on any mismatch between `plugin.json`, the README, and the skills on disk. Run it after any change that adds, renames, or promotes a skill. This overrides the unit-test framing of the §4 examples above.
+This repo has **no unit-test framework**. The gate is `scripts/check.sh` — the adapter-manifest drift guard, which exits non-zero on any mismatch between `plugin.json` and the skills on disk. Run it after any change that adds, renames, or promotes a skill. This overrides the unit-test framing of the §4 examples above.

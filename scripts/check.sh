@@ -2,9 +2,8 @@
 # Adapter-manifest drift guard.
 #
 # Enforces the adapter-manifest contract (see CLAUDE.md): every shipped skill
-# appears in both the Claude Code harness adapter's manifest
-# (.claude-plugin/plugin.json) and the README, and nothing listed is missing
-# on disk. Draft skills under skills/in-progress/ must NOT appear in the
+# appears in the Claude Code harness adapter's manifest
+# (.claude-plugin/plugin.json), and nothing listed is missing on disk. Draft skills under skills/in-progress/ must NOT appear in the
 # manifest.
 #
 # Exits non-zero on any mismatch.
@@ -14,7 +13,6 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
 PLUGIN_JSON=".claude-plugin/plugin.json"
-README="README.md"
 
 fail=0
 err() { printf 'DRIFT: %s\n' "$1" >&2; fail=1; }
@@ -65,13 +63,7 @@ for l in ${listed[@]+"${listed[@]}"}; do
     || err "$PLUGIN_JSON lists '$l' but skills/$l does not exist on disk"
 done
 
-# 3. Every shipped skill must appear in the README.
-for s in ${shipped[@]+"${shipped[@]}"}; do
-  grep -q -- "$s" "$README" \
-    || err "skill '$s' ships on disk but is absent from $README"
-done
-
-# 4. No skills/in-progress/ draft may be listed in plugin.json.
+# 3. No skills/in-progress/ draft may be listed in plugin.json.
 for d in ${drafts[@]+"${drafts[@]}"}; do
   contains "$d" ${listed[@]+"${listed[@]}"} \
     && err "draft 'skills/in-progress/$d' must not be listed in $PLUGIN_JSON"
@@ -81,4 +73,4 @@ if [ "$fail" -ne 0 ]; then
   echo "check.sh: adapter-manifest drift detected." >&2
   exit 1
 fi
-echo "check.sh: adapter manifest <-> disk <-> README in sync."
+echo "check.sh: adapter manifest <-> disk in sync."

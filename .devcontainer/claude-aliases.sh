@@ -26,22 +26,7 @@ alias gpf='git push --force'
 # Local models on HP-ZGX, reached through the Mac's SSH tunnel:
 # host.docker.internal:8000 → Mac host → SSH tunnel → HP-ZGX :8000
 # Start a backend on the Mac first: start-local-setup [--nvfp4|--flashnext]
-# (see ~/repos/hp-zgx-workflow). Ollama on :11434 is retired.
-#
-# All three model slots are pinned because Claude Code sends background
-# requests to a Haiku model id that the local server does not serve.
-# MAX_THINKING_TOKENS caps reasoning effort, which otherwise burns minutes on
-# trivial edits; API_TIMEOUT_MS outlasts long decodes on 256k context.
-
-# claude-vllm: whichever backend serves the name "qwen" (qwen38 or nvfp4)
-claude-vllm() {
-  ANTHROPIC_AUTH_TOKEN=vllm \
-  ANTHROPIC_BASE_URL=http://host.docker.internal:8000 \
-  ANTHROPIC_DEFAULT_OPUS_MODEL=qwen \
-  ANTHROPIC_DEFAULT_SONNET_MODEL=qwen \
-  ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen \
-    claude --model qwen --dangerously-skip-permissions "$@"
-}
+# (see ~/repos/hp-zgx-workflow). Used via pi only (pi-zgx, pi-flashnext below).
 
 # check-vllm: diagnose connectivity to the HP-ZGX backend via SSH tunnel
 check-vllm() {
@@ -83,54 +68,7 @@ check-vllm() {
     | sed 's/"id":"//;s/"//'
 
   echo ""
-  echo "=== All checks passed — run: claude-qwen38 | claude-nvfp4 | claude-flashnext | pi-zgx | pi-flashnext ==="
-}
-
-# claude-qwen38: SGLang Qwen3.8-27B, Anthropic Messages API
-claude-qwen38() {
-  ANTHROPIC_AUTH_TOKEN=sglang \
-  ANTHROPIC_BASE_URL=http://host.docker.internal:8000 \
-  ANTHROPIC_DEFAULT_OPUS_MODEL=qwen \
-  ANTHROPIC_DEFAULT_SONNET_MODEL=qwen \
-  ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen \
-  CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 \
-  MAX_THINKING_TOKENS=2048 \
-  API_TIMEOUT_MS=3600000 \
-    claude --model qwen --dangerously-skip-permissions "$@"
-}
-
-# claude-nvfp4: NVFP4 35B-A3B — the fastest backend; same served name "qwen"
-claude-nvfp4() {
-  ANTHROPIC_AUTH_TOKEN=vllm \
-  ANTHROPIC_BASE_URL=http://host.docker.internal:8000 \
-  ANTHROPIC_DEFAULT_OPUS_MODEL=qwen \
-  ANTHROPIC_DEFAULT_SONNET_MODEL=qwen \
-  ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen \
-  CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 \
-  MAX_THINKING_TOKENS=2048 \
-  API_TIMEOUT_MS=3600000 \
-    claude --model qwen --dangerously-skip-permissions "$@"
-}
-
-# claude-flashnext: Qwen3.8-Flash-Next 125B-A5B
-#   claude-flashnext [args]        interactive
-#   claude-flashnext -r "task"     non-interactive
-claude-flashnext() {
-  local model="qwen3.8-flash-next-a5b"
-  local print_args=()
-  if [[ "$1" == "-r" ]]; then
-    shift
-    print_args=(--print -p)
-  fi
-  ANTHROPIC_AUTH_TOKEN=vllm \
-  ANTHROPIC_BASE_URL=http://host.docker.internal:8000 \
-  ANTHROPIC_DEFAULT_OPUS_MODEL="$model" \
-  ANTHROPIC_DEFAULT_SONNET_MODEL="$model" \
-  ANTHROPIC_DEFAULT_HAIKU_MODEL="$model" \
-  CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 \
-  MAX_THINKING_TOKENS=2048 \
-  API_TIMEOUT_MS=3600000 \
-    claude --model "$model" --dangerously-skip-permissions "${print_args[@]}" "$@"
+  echo "=== All checks passed — run: pi-zgx | pi-flashnext ==="
 }
 
 # Optional bot identity for pi. When PI_GIT_USER is set, pi commits and pushes

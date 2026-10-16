@@ -24,7 +24,7 @@ Complete the task. This repo is a Claude Code **plugin** (see `CONTEXT.md`), not
 
 Before committing, run whichever of these apply:
 
-- `scripts/check.sh` — the plugin drift guard: verifies `plugin.json` ↔ shipped skills on disk ↔ README are in sync. Introduced by issue #5; if it does not exist yet, skip this gate.
+- `scripts/check.sh` — the plugin drift guard: verifies `plugin.json` ↔ shipped skills on disk are in sync. Introduced by issue #5; if it does not exist yet, skip this gate.
 
 On pi there is no plugin-load smoke-check: skills are discovered from `.agents/skills/` at startup (trusted via `-a`), so the drift guard is the gate.
 

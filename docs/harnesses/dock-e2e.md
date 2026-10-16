@@ -2,7 +2,7 @@
 
 The runtime counterpart of the static drift guard. `scripts/check.sh` is the
 static half: it proves the adapter-manifest contract (`plugin.json` ↔ shipped
-skills on disk ↔ README) holds in the working tree. The dock E2E is the runtime
+skills on disk) holds in the working tree. The dock E2E is the runtime
 half: it proves the docked base actually works in a host project's workbench —
 every harness adapter wired, the pinned vendored set intact, the dock step's
 guardrails live — in one deterministic run against a throwaway host project.

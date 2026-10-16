@@ -33,18 +33,6 @@ Host projects **dock** the base: `make dock HOST=<path-to-host-repo>`
 scaffolds the workbench stack, and the dock step wires every harness adapter
 on each workbench start (see `docs/harnesses/dock-e2e.md`).
 
-## Shipped skills
-
-| Skill | What it does | Needs |
-|---|---|---|
-| `web-search-local` | Web search / URL extraction via Tavily | `TAVILY_API_KEY` |
-| `fetch-news-local` | Fetch news articles via NewsAPI into markdown | `NEWS_API_KEY` |
-| `fetch-free-images-local` | Fetch free stock images via Pexels / Pixabay | `PEXELS_API_KEY` and/or `PIXABAY_API_KEY` |
-
-API keys are forwarded from the host environment (see
-`.devcontainer/devcontainer.json`). Run `scripts/check.sh` inside the
-workbench after adding or renaming a skill.
-
 ## Connect to a workbench
 
 Each workbench runs sshd; its published port is `SSH_PORT` in the host's `.env`
@@ -89,8 +77,6 @@ The workbench is a trusted, single-user dev environment — read before running:
   root-equivalent on the host.
 - `~/.claude`, `~/.claude.json` and API keys from the host environment are
   mounted/forwarded into the container.
-- The `claude-*` local-model aliases run Claude Code with
-  `--dangerously-skip-permissions`.
 
 ## License
 

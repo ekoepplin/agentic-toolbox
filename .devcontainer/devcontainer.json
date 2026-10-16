@@ -14,9 +14,8 @@
   "remoteUser": "node",
 
   // Local models (host.docker.internal:8000, reached via the host's SSH
-  // tunnel): claude-qwen38 | claude-nvfp4 | claude-flashnext | claude-vllm,
-  // pi-zgx | pi-flashnext — see .devcontainer/claude-aliases.sh; diagnose
-  // with check-vllm. Plain claude / pi use the Anthropic API.
+  // tunnel) are used through pi: pi-zgx | pi-flashnext — see
+  // .devcontainer/claude-aliases.sh; diagnose with check-vllm.
   "remoteEnv": {
     "VLLM_DEFAULT_MODEL": "qwen",
     // API keys forwarded from the host environment.

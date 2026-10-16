@@ -60,7 +60,7 @@ Resolution order for both `--backend` and `--model`:
 2. **`.env.ralph`** in the repo root — `RALPH_BACKEND=vllm`, `RALPH_MODEL=qwen` (see `.env.ralph.example`)
 3. **Built-in default** — `vllm` + `$VLLM_DEFAULT_MODEL` (which is `qwen` in this devcontainer)
 
-The scripts set `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` themselves, so you don't need to be inside a `claude-vllm` / `claude-qwen38` wrapper session — a plain shell works.
+The scripts set `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` themselves, so a plain shell works — no wrapper session needed.
 
 ### Examples
 
