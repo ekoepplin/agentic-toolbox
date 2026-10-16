@@ -26,12 +26,6 @@ RUN apt-get update && apt-get install -y python3 python3-pip python3-venv wget u
     # Allow node to restart sshd without password (needed by postStartCommand)
     echo "node ALL=(ALL) NOPASSWD: /usr/sbin/sshd" >> /etc/sudoers
 
-# Google Cloud CLI
-RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    apt-get update && apt-get install -y google-cloud-cli && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # Docker CLI only (docker-outside-of-docker) — talks to the Mac host's daemon
 # via the mounted /var/run/docker.sock (compose volume), no nested dockerd.
 # fix-docker-socket.sh (run every start by dock.sh) matches `node` into the
@@ -48,14 +42,17 @@ COPY fix-docker-socket.sh /usr/local/bin/fix-docker-socket.sh
 RUN chmod 0755 /usr/local/bin/fix-docker-socket.sh
 
 # pi-docparser runtime deps (npm:pi-docparser in pi-extensions.lock):
-#   - LibreOffice (headless Writer/Calc/Impress) converts DOCX/XLSX/PPTX
-#   - Tesseract + English traineddata gives offline OCR for scanned PDFs/images
-# --no-install-recommends keeps the LibreOffice pull to the headless conversion
-# stack — no GUI/Base/Draw/Math/Java metapackages.
+#   - Tesseract + German traineddata gives offline OCR for scanned PDFs/images
+#     (docked hosts parse German scans). LiteParse bundles its own Tesseract
+#     engine; it only reads the traineddata via
+#     document_parse({ ocrLanguage: "deu", tessdataPath: $TESSDATA_PREFIX }).
+#   - No LibreOffice: docked hosts parse PDFs/images only, which LiteParse
+#     handles natively. Add libreoffice-writer/-calc/-impress back if a host
+#     needs DOCX/XLSX/PPTX conversion.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libreoffice-writer libreoffice-calc libreoffice-impress \
-        tesseract-ocr tesseract-ocr-eng && \
+        tesseract-ocr tesseract-ocr-deu && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 # Runtime dep for the pinned pi-voice-stt extension (pi-extensions.lock):
 #   - ffmpeg captures the microphone to a temporary WAV before transcription
@@ -121,10 +118,6 @@ RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.2.0 && \
 # the cache is left root-owned and later `npm install` as node fails with EACCES.
 RUN npm install -g ccstatusline && \
     chown -R 1000:1000 /home/node/.npm
-
-# Playwright Chromium + system deps — pinned to match @playwright/test in package.json
-RUN npx -y playwright@1.58.2 install --with-deps chromium && \
-    chown -R 1000:1000 /home/node/.cache
 
 # Symlink macOS-style path so settings.json hook resolves inside container
 # Override MAC_USER at build time for a different host username:

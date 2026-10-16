@@ -8,8 +8,8 @@ the pi.dev package page or npm first.
 
 Some extensions need a runtime binary in the image. Those are provisioned in
 `.devcontainer/Dockerfile` alongside the pin, the same way `pi-docparser` pulls
-LibreOffice + Tesseract. This doc records the pinned set and any per-extension
-caveats.
+Tesseract's German traineddata. This doc records the pinned set and any
+per-extension caveats.
 
 ## The pinned set
 
@@ -19,7 +19,7 @@ caveats.
 | `pi-web-access` | web fetch / search | — |
 | `pi-subagents` | subagent orchestration | — |
 | `remote-pi` | remote session bridge | — |
-| `pi-docparser` | DOCX/XLSX/PPTX + scanned-PDF/image parsing | LibreOffice (headless), Tesseract OCR |
+| `pi-docparser` | scanned-PDF/image parsing (DOCX/XLSX/PPTX needs LibreOffice, not in the image) | Tesseract + `deu` traineddata (`TESSDATA_PREFIX`) |
 | `pi-voice-stt` | voice dictation into the pi TUI | `ffmpeg` |
 | `pi-context` | agentic context management | — |
 | `pi-powerline-footer` | powerline-style status bar | — (a Nerd Font in the client terminal for the glyphs) |
