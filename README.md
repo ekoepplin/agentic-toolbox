@@ -40,16 +40,3 @@ ssh -p <SSH_PORT> node@localhost
 - The SSH port is published on all interfaces (for Tailscale/mobile access);
   key-only auth is what protects it.
 
-## Shipped skills
-
-The plugin ships exactly these skills (listed in `.claude-plugin/plugin.json`):
-
-- [web-search-local](skills/web-search-local/SKILL.md) — web search and URL content
-  extraction (Tavily) for unblocking a stuck local model: `/agentic-toolbox:web-search-local`
-- [fetch-news-local](skills/fetch-news-local/SKILL.md) — fetch news articles via
-  NewsAPI and save them as markdown files: `/agentic-toolbox:fetch-news-local`
-- [fetch-free-images-local](skills/fetch-free-images-local/SKILL.md) — fetch free
-  high-quality images from Pexels and Pixabay: `/agentic-toolbox:fetch-free-images-local`
-
-Draft skills live in `skills/in-progress/` and are never listed in
-`.claude-plugin/plugin.json`, so they are not installed.
