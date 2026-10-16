@@ -25,3 +25,7 @@ __pycache__/
 # remote-pi writes per-machine runtime state (agent name, relay toggle) here;
 # it appears in the repo only because the base is bind-mounted into the container.
 .pi/remote-pi/
+
+# Per-user Claude Code overrides. Ignored globally on the Mac, but the container
+# has no global gitignore — without this the dock probe flags a dirty base.
+.claude/settings.local.json
