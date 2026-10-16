@@ -19,7 +19,7 @@ through `~/.pi/agent/models.json`. This doc covers the HP-ZGX setup used here.
 
 ## vLLM/SGLang on HP-ZGX
 
-**All inference runs on the HP-ZGX host** (a GB10 box, 192.168.178.103). The Mac
+**All inference runs on the HP-ZGX host** (a GB10 box, <zgx-lan-ip>). The Mac
 only holds the SSH tunnel and runs the client. The models run in Docker containers
 on ZGX (`sglang-qwen38`, `vllm-dflash`, …), started by `service/utils/start-*.sh`
 scripts that Ansible deploys to `/usr/local/bin` there. The GB10 has one shared GPU
@@ -45,7 +45,7 @@ The tunnel relies on this `~/.ssh/config` entry:
 
 ```
 Host HP-ZGX
-    HostName 192.168.178.103
+    HostName <zgx-lan-ip>
     LocalForward *:11434 localhost:11434
     LocalForward *:8000  localhost:8000
 ```

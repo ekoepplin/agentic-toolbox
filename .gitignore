@@ -10,17 +10,8 @@
 __pycache__/
 *.pyc
 
-# Local dev-workflow aids — the Matt-Pocock pipeline harness (MATT-WORKFLOW.md +
-# ralph loop) and reference notes. Used to develop this toolbox, never shipped or
-# committed. Same rationale as the vendored skill set above (docs/adr/0001).
-
-
 # Ralph backend/model preferences, sourced by the ralph scripts (local dev aid)
 .env.ralph
-
-# Pi harness local config (skill exposure via .pi/settings.json, ralph
-# guardrail extension). Local dev aid, never committed — same rationale as
-# agentic-workflow/ (docs/adr/0001)..pi/
 
 # remote-pi writes per-machine runtime state (agent name, relay toggle) here;
 # it appears in the repo only because the base is bind-mounted into the container.
@@ -29,3 +20,6 @@ __pycache__/
 # Per-user Claude Code overrides. Ignored globally on the Mac, but the container
 # has no global gitignore — without this the dock probe flags a dirty base.
 .claude/settings.local.json
+
+# macOS Finder metadata
+.DS_Store
