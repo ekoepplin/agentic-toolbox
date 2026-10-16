@@ -23,6 +23,39 @@ per-extension caveats.
 | `pi-voice-stt` | voice dictation into the pi TUI | `ffmpeg` |
 | `pi-context` | agentic context management | — |
 | `pi-powerline-footer` | powerline-style status bar | — (a Nerd Font in the client terminal for the glyphs) |
+| `openwiki` | repository wiki with grounded Claims (init/update lifecycle) | — (optional peers `jsdom`/`mermaid` not installed; see below) |
+
+## openwiki (repository wiki)
+
+[OpenWiki](https://github.com/langchain-ai/openwiki) generates and updates a
+Markdown wiki under `openwiki/` in a repository; each page's facts are stored as
+Claims with source evidence in `openwiki/.claims/`. Scope and priorities come
+from a user-authored `openwiki/INSTRUCTIONS.md`.
+
+**Which model writes the pages.** In pi the package's extension starts the
+OpenWiki CLI as an MCP server (`openwiki mcp --host pi`). That server only owns
+the run state, the page queue and Claims validation; the research and the page
+prose come from **pi's own model** — in the workbench the seeded default
+`vllm-hpzgx`/`qwen`. MCP mode never loads OpenWiki's own provider credentials
+(`~/.openwiki/.env`), so no `OPENWIKI_PROVIDER` setup is needed. Start a run in
+pi ("openwiki init"); the workbench's `claude` uses its own provider.
+
+**Caveats**
+
+- **Six tools only.** The pi extension registers the lifecycle tools
+  (`openwiki_begin`, `_submit_plan`, `_next_page`, `_inspect_page_claims`,
+  `_submit_page`, `_finish`). The MCP server also has `openwiki_search` /
+  `openwiki_read` / workspace tools, but they are not exposed in pi — read an
+  existing wiki by searching `openwiki/` directly.
+- **Telemetry.** The standalone CLI (`openwiki --init` / `--update`) sends one
+  anonymous PostHog usage event per run; the MCP path used by pi emits none.
+  If you run the CLI standalone, set `OPENWIKI_TELEMETRY_DISABLED=1` (or
+  `DO_NOT_TRACK=1`).
+- **Mermaid validation.** `jsdom` and `mermaid` are optional peer dependencies
+  and are not installed; diagram fences are then checked heuristically only.
+- **Skill loads everywhere.** Pinned here, the `openwiki` skill is offered in
+  every docked workbench; its trigger is narrow (explicit request or an
+  architecture/dependency uncertainty).
 
 ## pi-voice-stt (voice dictation)
 

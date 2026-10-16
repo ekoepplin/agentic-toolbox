@@ -15,6 +15,9 @@ npm:pi-voice-stt@0.7.0
 # Aligned with the Mac's pi packages (dotfiles pi/agent/settings.json):
 npm:pi-context@2.3.0
 npm:pi-powerline-footer@0.20.1
+# Repository wiki with grounded Claims; in pi the page text comes from pi's own
+# model (see docs/harnesses/pi-agent-harness/pi-extensions.md).
+npm:openwiki@0.7.2
 
 # Optional companion for remote-pi: native mobile rendering of ask_user prompts.
 # Uncomment to enable.
