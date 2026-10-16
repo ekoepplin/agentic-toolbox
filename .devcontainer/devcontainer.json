@@ -1,91 +1,59 @@
 {
-  // ============================================================================
-  // THIN DEVCONTAINER WRAPPER (issue #9)
+  // Thin devcontainer wrapper (issue #9). The workbench — base image, the
+  // docked base at its mirrored host path, mounts, SSH port, sshd startup —
+  // lives in the root compose stack (compose.yaml). This file only tells
+  // VS Code which service to open and what to run on first create.
   //
-  // The workbench — base image, the docked base at its mirrored Mac path, all
-  // mounts, the published SSH port, sshd startup — lives in the root compose
-  // stack (compose.yaml). This file only tells VS Code which service to open
-  // and what to run on first create.
-  //
-  //   make image   # build the base image the compose stack runs (issue #8)
-  //   Reopen in Container  →  lands in the compose workbench
-  // ============================================================================
+  //   make image  →  Reopen in Container  →  lands in the compose workbench
   "name": "agentic-toolbox",
 
-  // ── WORKBENCH: the compose service to open ─────────────────────────────────
   "dockerComposeFile": "../compose.yaml",
   "service": "workbench",
-  // The docked base's mirrored Mac path — where VS Code opens and where user
-  // commands (postCreateCommand) run. Same path the compose volume publishes.
-  "workspaceFolder": "/Users/ekoepplin/repos/agentic-toolbox",
+  // The mirrored host path — same path the compose volume mounts (BASE_PATH).
+  "workspaceFolder": "${localWorkspaceFolder}",
+  "remoteUser": "node",
 
-  // ============================================================================
-  // AGENTS — Local LLM routing (project-specific model preferences)
-  // ============================================================================
-  // HP-ZGX (host.docker.internal:8000 via the Mac's SSH tunnel; Ollama :11434 retired):
-  //   claude-qwen38 | claude-nvfp4 | claude-flashnext | claude-vllm, pi-zgx | pi-flashnext
-  //   (defined in .devcontainer/claude-aliases.sh; diagnose with check-vllm)
-  // Cloud: plain claude / pi → Anthropic API
-  // ============================================================================
+  // Local models (host.docker.internal:8000, reached via the host's SSH
+  // tunnel): claude-qwen38 | claude-nvfp4 | claude-flashnext | claude-vllm,
+  // pi-zgx | pi-flashnext — see .devcontainer/claude-aliases.sh; diagnose
+  // with check-vllm. Plain claude / pi use the Anthropic API.
   "remoteEnv": {
-    // ── PROJECT: preferred models for this project ────────────────────────────
     "VLLM_DEFAULT_MODEL": "qwen",
-    // ── PROJECT: API keys forwarded from Mac host environment ─────────────────
+    // API keys forwarded from the host environment.
     "TAVILY_API_KEY": "${localEnv:TAVILY_API_KEY}",
     "NEWS_API_KEY": "${localEnv:NEWS_API_KEY}",
     "PEXELS_API_KEY": "${localEnv:PEXELS_API_KEY}",
+    "PIXABAY_API_KEY": "${localEnv:PIXABAY_API_KEY}",
     "GH_TOKEN": "${localEnv:GITHUB_ROBOT_MAC_MINI}",
     "GITHUB_TOKEN_MACBOOK": "${localEnv:GITHUB_TOKEN_MACBOOK}",
     "GITHUB_ROBOT_MAC_MINI": "${localEnv:GITHUB_ROBOT_MAC_MINI}",
-    // ── BASE: leave unchanged ─────────────────────────────────────────────────
     "ENABLE_LSP_TOOL": "1",
     "RTK_MODE": "token-efficient",
     "DISABLE_AUTOUPDATER": "1"
   },
 
-  "remoteUser": "node",
-
-  // ── postCreateCommand ────────────────────────────────────────────────────────
-  // Runs once after container creation (not on every start). Copies the staged
-  // SSH keys + claude.json, registers the headroom MCP. Harness wiring — the
-  // dock step (vendored skills, Claude Code plugin alias, pi config) plus
-  // sshd — runs on every start via the compose service command.
+  // Runs once after creation. Harness wiring (dock step) and sshd run on
+  // every start via the compose service command.
   "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
 
-  // ── DEV SERVERS: forward via VS Code (localhost on host, no rebuild) ────────
   "forwardPorts": [3000],
-
-  // ── PORTS: never auto-forward 8000 ──────────────────────────────────────────
-  // Belt-and-suspenders with remote.autoForwardPorts:false below. VS Code
-  // auto-forwarding plants a 127.0.0.1:8000 listener that shadows the SSH
-  // tunnel to ZGX; Docker routes host.docker.internal to host loopback, so the
-  // container hits the dead VS Code forward instead of the tunnel.
+  // Never auto-forward 8000: VS Code would plant a 127.0.0.1:8000 listener on
+  // the host that shadows the SSH tunnel to the model server (Docker routes
+  // host.docker.internal to host loopback).
   "portsAttributes": {
     "8000": { "onAutoForward": "ignore" }
   },
-
-  // ── MCPs — add project MCP servers here ─────────────────────────────────────
-  // headroom (headroomlabs-ai/headroom) — context compression layer, 60-95% input
-  //   token reduction. Installed via pip in the base image; registered via
-  //   `headroom mcp install` in post-create.sh → tools: headroom_compress,
-  //   headroom_retrieve, headroom_stats
 
   "customizations": {
     "vscode": {
       "settings": {
         "terminal.integrated.defaultProfile.linux": "zsh",
-        // The SSH tunnel (LocalForward *:PORT) is the only transport to ZGX.
-        // VS Code auto-forwarding plants a 127.0.0.1:PORT listener that shadows
-        // the tunnel; Docker routes host.docker.internal to host loopback, so the
-        // container hits VS Code's dead forward instead of the tunnel. Disable it.
-         "remote.autoForwardPorts": false
+        "remote.autoForwardPorts": false
       },
       "extensions": [
-        // ── BASE extensions ───────────────────────────────────────────────────
         "editorconfig.editorconfig",
         "ms-vscode.vscode-json",
         "donjayamanne.python-extension-pack"
-        // ── PROJECT extensions: add language/framework tools here ─────────────
       ]
     }
   }

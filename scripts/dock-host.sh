@@ -180,6 +180,13 @@ services:
       # sshd inside the container listens on 2222.
       - "0.0.0.0:\${SSH_PORT}:2222"
 
+    environment:
+      # Optional bot identity for pi (see the base's claude-aliases.sh);
+      # passed through from the host only when set there.
+      - PI_GIT_USER
+      - PI_GIT_EMAIL
+      - PI_GH_TOKEN
+
     extra_hosts:
       # Local LLM endpoints sit on the Mac's loopback and are reached via
       # host.docker.internal.

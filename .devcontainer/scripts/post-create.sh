@@ -1,27 +1,18 @@
 #!/usr/bin/env bash
 # Runs once after the container is created (postCreateCommand in devcontainer.json).
+# SSH keys are synced by the dock step (dock.sh), which runs on every start —
+# this hook only covers create-time extras.
 set -euo pipefail
-
-SCRIPTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ── Persistent directories ───────────────────────────────────────────────────
 mkdir -p /home/node/agent-logs /home/node/agent-work
 
-# ── SSH authorized_keys ──────────────────────────────────────────────────────
-# Bind-mount has wrong ownership for sshd — must copy, not use directly.
-cp /tmp/container_authorized_keys /home/node/.ssh/authorized_keys
-chmod 600 /home/node/.ssh/authorized_keys
-
 # ── claude.json ──────────────────────────────────────────────────────────────
-# Staged read-only at /tmp to avoid race conditions with Mac's Claude Code.
-cp /tmp/claude.json.host /home/node/.claude.json
-
-# ── Project dependencies ─────────────────────────────────────────────────────
-cd /workspace && uv sync || true
-
-# ── External skills ──────────────────────────────────────────────────────────
-# The pinned external skill set is wired by the dock step (dock.sh), which
-# runs on every container start — not just this create-time hook.
+# Seed from the read-only host copy before headroom writes to it; may race
+# with dock.sh, which seeds the same way (only if missing).
+if [ -f /tmp/claude.json.host ] && [ ! -f "$HOME/.claude.json" ]; then
+  cp /tmp/claude.json.host "$HOME/.claude.json"
+fi
 
 # ── Headroom MCP server ──────────────────────────────────────────────────────
 # Registers headroom as an MCP server in ~/.claude/settings.json so Claude Code

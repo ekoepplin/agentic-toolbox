@@ -10,7 +10,8 @@
 # no host-project file can ever enter the context.
 #
 # The image is tagged locally and built for the host architecture (the base
-# runs on the Mac that built it; there is no registry).
+# runs on the machine that built it; there is no registry). HOST_HOME mirrors
+# the host's ~/.claude/hooks at its host path inside the image.
 
 # Canonical image tag. The workbench compose stack (#9) and the scaffolder
 # (#11) reference exactly this name — do not rename without updating them.
@@ -22,7 +23,7 @@ CONTEXT    := .devcontainer
 
 # Build the base image from the base's own files only.
 image:
-	docker build -f $(DOCKERFILE) -t $(BASE_IMAGE) $(CONTEXT)
+	docker build -f $(DOCKERFILE) --build-arg HOST_HOME=$(HOME) -t $(BASE_IMAGE) $(CONTEXT)
 
 # Dock a host project in one command (issue #11): generates the host's
 # three-file tree (compose.yaml, .env, .devcontainer/devcontainer.json),

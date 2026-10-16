@@ -133,24 +133,32 @@ claude-flashnext() {
     claude --model "$model" --dangerously-skip-permissions "${print_args[@]}" "$@"
 }
 
-# pi commits and pushes as the GitHub user datadidact-bot — same identity as
-# the Mac's pi wrapper (dotfiles zsh/zshrc). Scoped to the pi process only, so
-# git commits made from the shell itself keep the personal identity.
-# Token: DATADIDACT_BOT_GH_TOKEN in the container env (the bot's classic PAT,
-# scopes repo + workflow). Without it pushes fail instead of falling back to
-# another login: the credential helpers are replaced, gh gets its own empty
-# config dir, and no other GitHub token is passed through.
+# Optional bot identity for pi. When PI_GIT_USER is set, pi commits and pushes
+# as that GitHub user (e.g. a dedicated bot account); otherwise pi runs as-is.
+# Scoped to the pi process only, so git commits made from the shell itself keep
+# the personal identity.
+#   PI_GIT_USER   GitHub login of the bot
+#   PI_GIT_EMAIL  commit email (default: <PI_GIT_USER>@users.noreply.github.com)
+#   PI_GH_TOKEN   the bot's PAT (scopes repo + workflow)
+# Without a token pushes fail instead of falling back to another login: the
+# credential helpers are replaced, gh gets its own empty config dir, and no
+# other GitHub token is passed through.
 pi() {
-  local bot_email="341405731+datadidact-bot@users.noreply.github.com"
-  local token="${DATADIDACT_BOT_GH_TOKEN:-}"
-  [[ -n $token ]] || echo "pi: DATADIDACT_BOT_GH_TOKEN not set; commits stay datadidact-bot, pushes will fail" >&2
-  GIT_AUTHOR_NAME=datadidact-bot GIT_AUTHOR_EMAIL=$bot_email \
-  GIT_COMMITTER_NAME=datadidact-bot GIT_COMMITTER_EMAIL=$bot_email \
-  GH_TOKEN=$token GITHUB_TOKEN=$token GH_CONFIG_DIR=$HOME/.config/gh-datadidact-bot \
+  if [[ -z ${PI_GIT_USER:-} ]]; then
+    command pi "$@"
+    return
+  fi
+  local user=$PI_GIT_USER
+  local email="${PI_GIT_EMAIL:-$user@users.noreply.github.com}"
+  local token="${PI_GH_TOKEN:-}"
+  [[ -n $token ]] || echo "pi: PI_GH_TOKEN not set; commits stay $user, pushes will fail" >&2
+  GIT_AUTHOR_NAME=$user GIT_AUTHOR_EMAIL=$email \
+  GIT_COMMITTER_NAME=$user GIT_COMMITTER_EMAIL=$email \
+  GH_TOKEN=$token GITHUB_TOKEN=$token GH_CONFIG_DIR=$HOME/.config/gh-$user \
   GIT_CONFIG_COUNT=2 \
   GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0= \
   GIT_CONFIG_KEY_1=credential.https://github.com.helper \
-  GIT_CONFIG_VALUE_1='!f() { test "$1" = get && test -n "$GH_TOKEN" && echo username=datadidact-bot && echo "password=$GH_TOKEN"; }; f' \
+  GIT_CONFIG_VALUE_1="!f() { test \"\$1\" = get && test -n \"\$GH_TOKEN\" && echo username=$user && echo \"password=\$GH_TOKEN\"; }; f" \
     command pi "$@"
 }
 

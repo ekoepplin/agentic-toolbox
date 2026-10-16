@@ -1,12 +1,16 @@
 # The base's own workbench (issue #9): the base dogfoods itself as its own
 # host project. A single service — the workbench — runs the base image and
-# docks the base at its mirrored Mac path. The thin devcontainer wrapper
+# docks the base at its mirrored host path. The thin devcontainer wrapper
 # (.devcontainer/devcontainer.json) opens VS Code into exactly this service.
 #
 #   make image              # build the base image first (issue #8)
 #   docker compose up -d    # start the workbench (the dock step wires every
 #                           # harness adapter on each start — issue #10)
 #   ssh -p 2224 node@localhost
+#
+# BASE_PATH is this repo's absolute host path, mounted at the same path in the
+# container (ADR-0004). Defaults to ~/repos/agentic-toolbox; export BASE_PATH
+# if you cloned elsewhere.
 #
 # `image` must stay the Makefile's canonical BASE_IMAGE (agentic-toolbox-base:latest).
 
@@ -15,12 +19,12 @@ services:
     image: agentic-toolbox-base:latest
 
     # The host project's code lives at the container's working directory —
-    # here that is the base itself, at its mirrored Mac path.
-    working_dir: /Users/ekoepplin/repos/agentic-toolbox
+    # here that is the base itself, at its mirrored host path.
+    working_dir: ${BASE_PATH:-${HOME}/repos/agentic-toolbox}
 
     volumes:
-      # Docked base, at its mirrored Mac path.
-      - ${HOME}/repos/agentic-toolbox:/Users/ekoepplin/repos/agentic-toolbox
+      # Docked base, at its mirrored host path.
+      - ${BASE_PATH:-${HOME}/repos/agentic-toolbox}:${BASE_PATH:-${HOME}/repos/agentic-toolbox}
       # Host Claude config (settings, sessions, memory).
       - ${HOME}/.claude:/home/node/.claude
       # Staged read-only; the dock step seeds /home/node/.claude.json from it
@@ -32,7 +36,7 @@ services:
       # Agent logs + scratch space (survive container rebuilds).
       - ${HOME}/agent-logs:/home/node/agent-logs:cached
       - ${HOME}/agent-work:/home/node/agent-work
-      # Mac host's Docker socket (docker-outside-of-docker) — lets the
+      # Host Docker socket (docker-outside-of-docker) — lets the
       # in-container docker CLI talk to the host daemon (e.g. `vercel dev`
       # container builds). fix-docker-socket.sh (dock.sh) matches the gid.
       - /var/run/docker.sock:/var/run/docker.sock
@@ -43,8 +47,15 @@ services:
       # inside the container listens on 2222.
       - "0.0.0.0:2224:2222"
 
+    environment:
+      # Optional bot identity for pi (see .devcontainer/claude-aliases.sh);
+      # passed through from the host only when set there.
+      - PI_GIT_USER
+      - PI_GIT_EMAIL
+      - PI_GH_TOKEN
+
     extra_hosts:
-      # Local LLM endpoints sit on the Mac's loopback and are reached via
+      # Local LLM endpoints sit on the host's loopback and are reached via
       # host.docker.internal.
       - "host.docker.internal:host-gateway"
 
@@ -53,4 +64,4 @@ services:
     # docked base into every supported harness on every start — not just
     # first creation. A dock failure is visible in the logs and retried on
     # the next start; it never takes the workbench down.
-    command: ["/bin/sh", "-c", "sudo /usr/sbin/sshd; /Users/ekoepplin/repos/agentic-toolbox/.devcontainer/scripts/dock.sh || echo 'dock: step FAILED — workbench stays up, re-run .devcontainer/scripts/dock.sh manually'; exec sleep infinity"]
+    command: ["/bin/sh", "-c", "sudo /usr/sbin/sshd; ${BASE_PATH:-${HOME}/repos/agentic-toolbox}/.devcontainer/scripts/dock.sh || echo 'dock: step FAILED — workbench stays up, re-run .devcontainer/scripts/dock.sh manually'; exec sleep infinity"]

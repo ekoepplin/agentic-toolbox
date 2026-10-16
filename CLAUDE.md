@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository is the **central Claude Code plugin** for all of ekoepplin's local projects.
+This repository is the **central Claude Code plugin** shared by all of its owner's local projects.
 
 It serves as the single place where shared AI behavior is defined — behavioral guidelines, reusable
 skills, agent definitions, lifecycle hooks, and utility scripts. Individual project repositories
@@ -34,19 +34,23 @@ For the shared behavioral guidelines, a project's `CLAUDE.md` can import this
 file:
 
 ```markdown
-@/Users/ekoepplin/repos/agentic-toolbox/CLAUDE.md
+@~/repos/agentic-toolbox/CLAUDE.md
 ```
 
 ## Structure
 
 ```
 agentic-toolbox/
-├── skills/          # Reusable slash-command skills (one subdirectory + SKILL.md each)
+├── .claude-plugin/  # Claude Code harness adapter manifest (plugin.json)
+├── .devcontainer/   # Base image (Dockerfile), shell config, dock-step scripts, pin locks
+├── skills/          # Shipped skills (one subdirectory + SKILL.md each); drafts in skills/in-progress/
 ├── agents/          # Custom subagent persona definitions
-├── hooks/hooks.json # Lifecycle hooks: PreToolUse, PostToolUse, SessionStart, Stop
-├── scripts/         # Shell scripts invoked by hooks or skills
-├── bin/             # CLI executables (claude-toolbox wrapper, etc.)
-└── settings.json    # Default Claude Code settings when plugin is active
+├── commands/        # Slash commands
+├── hooks/           # Lifecycle hooks
+├── scripts/         # check.sh (drift guard), dock-host.sh (scaffolder), dock-e2e.sh
+├── agentic-workflow/# Ralph AFK loop + task files
+├── docs/            # ADRs, harness guides, agent docs
+└── compose.yaml     # This repo's own workbench stack
 ```
 
 ---
