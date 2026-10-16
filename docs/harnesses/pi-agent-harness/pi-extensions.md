@@ -42,6 +42,17 @@ pi ("openwiki init"); the workbench's `claude` uses its own provider.
 
 **Caveats**
 
+- **`openwiki_begin` writes into the repo.** Every begin refreshes an
+  OpenWiki block (`<!-- OPENWIKI:START -->…<!-- OPENWIKI:END -->`) in
+  `AGENTS.md` (created if missing) and `CLAUDE.md`; an `init` also creates
+  `.github/workflows/openwiki-update.yml`, a scheduled Action that runs
+  `openwiki code --update` with a hosted provider from repo secrets. Review
+  that diff before committing — drop the workflow in repos whose content must
+  not reach a hosted model.
+- **`openwiki/INSTRUCTIONS.md` is not passed on in pi.** Only the standalone
+  CLI prompt tells the model to read it; in pi, name it in your run prompt
+  ("read openwiki/INSTRUCTIONS.md first"). Output language is the `language`
+  argument of `openwiki_begin` (default `en`), so name that too.
 - **Six tools only.** The pi extension registers the lifecycle tools
   (`openwiki_begin`, `_submit_plan`, `_next_page`, `_inspect_page_claims`,
   `_submit_page`, `_finish`). The MCP server also has `openwiki_search` /
