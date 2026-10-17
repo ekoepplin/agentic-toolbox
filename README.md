@@ -67,6 +67,12 @@ make probe-voice             # speak while it records
 
 Details, Mac mini notes and troubleshooting: `docs/voice.md`.
 
+## Moving data between workbenches
+
+Workbenches don't share a network, but every one mounts `~/agent-work` and
+`~/agent-logs` from the Mac — drop a file in `~/agent-work` in one workbench,
+read it in another. What else can and can't reach across: `docs/cross-workbench.md`.
+
 ## Optional: a bot identity for pi
 
 Set these on the host to make pi commit and push as a dedicated GitHub
