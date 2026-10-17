@@ -55,6 +55,18 @@ ssh -p <SSH_PORT> node@localhost
   picker opens. Prompt config lives in `.devcontainer/p10k.zsh` — replace it
   with your own `~/.p10k.zsh` and `make image` to change it.
 
+## Voice
+
+Claude Code `/voice` works inside every workbench, recording from the Mac's
+microphone through a PulseAudio server on the Mac. One-time setup per Mac:
+
+```bash
+scripts/setup-mac-voice.sh   # PulseAudio as a brew service on 127.0.0.1:4713
+make probe-voice             # speak while it records
+```
+
+Details, Mac mini notes and troubleshooting: `docs/voice.md`.
+
 ## Optional: a bot identity for pi
 
 Set these on the host to make pi commit and push as a dedicated GitHub

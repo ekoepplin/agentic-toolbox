@@ -19,7 +19,7 @@ BASE_IMAGE := agentic-toolbox-base:latest
 DOCKERFILE := .devcontainer/Dockerfile
 CONTEXT    := .devcontainer
 
-.PHONY: image probe probe-dock dock dock-e2e
+.PHONY: image probe probe-voice probe-dock dock dock-e2e
 
 # Build the base image from the base's own files only.
 image:
@@ -76,7 +76,34 @@ probe: image
 		/opt/venv/bin/python -c "import newsapi, loguru, duckdb, tavily, requests; print(\"venv: skill deps importable\")"; \
 		command -v headroom; \
 		/opt/venv/bin/python -c "import torch, sys; sys.exit(\"FATAL: torch is a CUDA build\") if torch.version.cuda else print(\"venv: torch is CPU-only\")"; \
+		echo "-- voice capture tools (docs/voice.md) --"; \
+		command -v rec arecord pactl; \
+		[ "$$PULSE_SERVER" = "tcp:host.docker.internal:4713" ] \
+			|| { echo "FATAL: PULSE_SERVER not set"; exit 1; }; \
+		grep -q "type pulse" /etc/asound.conf \
+			|| { echo "FATAL: ALSA default not routed to pulse"; exit 1; }; \
+		echo "voice: rec + arecord routed to $$PULSE_SERVER"; \
 		echo "== all probes passed =="; \
+	'
+
+# Voice end to end (docs/voice.md): records 2 s from the Mac microphone through
+# the Mac's PulseAudio server, once via `rec` and once via `arecord` — the two
+# recorders Claude Code /voice falls back to. Fails on silence, which is what
+# a missing server or a denied macOS microphone permission looks like.
+# Requires scripts/setup-mac-voice.sh on the Mac. Speak while it records.
+probe-voice:
+	docker run --rm --add-host host.docker.internal:host-gateway $(BASE_IMAGE) /bin/bash -c ' \
+		set -e; \
+		pactl info | grep -E "Server Name|Default Source"; \
+		check() { \
+			peak=$$(sox "$$1" -n stat 2>&1 | awk "/Maximum amplitude/ {print \$$3}"); \
+			echo "$$2: peak $$peak"; \
+			awk -v p="$$peak" "BEGIN { exit !(p > 0.001) }" \
+				|| { echo "FATAL: $$2 recorded silence"; exit 1; }; \
+		}; \
+		rec -q -c1 -r16000 /tmp/rec.wav trim 0 2; check /tmp/rec.wav rec; \
+		arecord -q -f S16_LE -r16000 -c1 -d2 /tmp/arecord.wav; check /tmp/arecord.wav arecord; \
+		echo "== voice probe passed =="; \
 	'
 
 # Issue #10 acceptance probes against the dogfooded workbench (issue #9): the

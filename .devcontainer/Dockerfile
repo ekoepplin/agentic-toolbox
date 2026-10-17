@@ -36,6 +36,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #   DOCX/XLSX/PPTX conversion.
 # - ffmpeg: microphone capture/decode for pi-voice-stt. The workbench is
 #   headless, so capture needs a forwarded /dev/snd or the host→SSH mic bridge.
+# - sox + libsox-fmt-pulse, alsa-utils + libasound2-plugins, pulseaudio-utils:
+#   Claude Code /voice records with `rec` or `arecord`. Both reach the Mac
+#   microphone through the Mac's PulseAudio server (PULSE_SERVER below; the
+#   ALSA default device is routed to pulse in /etc/asound.conf). docs/voice.md.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl gpg && \
     install -m 0755 -d /etc/apt/keyrings && \
@@ -56,9 +60,12 @@ RUN apt-get update && \
         python3 python3-dev python3-pip python3-venv \
         openssh-client openssh-server sudo tmux fzf ncurses-term \
         gh docker-ce-cli \
-        tesseract-ocr tesseract-ocr-deu ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+        tesseract-ocr tesseract-ocr-deu ffmpeg \
+        sox libsox-fmt-pulse alsa-utils libasound2-plugins pulseaudio-utils && \
+    rm -rf /var/lib/apt/lists/* && \
+    printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > /etc/asound.conf
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
+    PULSE_SERVER=tcp:host.docker.internal:4713
 
 # ── duckdb CLI ───────────────────────────────────────────────────────────────
 RUN case "$(dpkg --print-architecture)" in \

@@ -106,5 +106,10 @@ installed for capture, but there is no microphone inside the container to captur
    (and a PulseAudio socket) into the container so `ffmpeg` captures directly.
    Not wired up by default — it's a host-specific mount.
 
+3. **Mac host: the PulseAudio bridge.** After `scripts/setup-mac-voice.sh`
+   (see `docs/voice.md`), the Mac microphone is available in every workbench
+   as `ffmpeg -f pulse -i default` — verified to record; whether
+   `pi-voice-stt` picks that input on its own is untested.
+
 If you instead run pi **locally** (outside the container) against the same lock,
 neither applies — `ffmpeg` captures your local mic directly.
