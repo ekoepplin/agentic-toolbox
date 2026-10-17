@@ -55,6 +55,9 @@ probe: image
 		grep -q claude-powerline /etc/claude-code/managed-settings.json \
 			|| { echo "FATAL: status line not set in managed settings"; exit 1; }; \
 		echo "claude-powerline: renders, set as status line"; \
+		grep -q "\"DISABLE_AUTOUPDATER\": \"1\"" /etc/claude-code/managed-settings.json \
+			|| { echo "FATAL: Claude Code auto-updater not disabled"; exit 1; }; \
+		echo "claude: auto-updater disabled (version pinned)"; \
 		git config --system --get-all safe.directory | grep -qx "\*" \
 			|| { echo "FATAL: git safe.directory not set"; exit 1; }; \
 		echo "-- sshd config: internal port, key-only, single user --"; \

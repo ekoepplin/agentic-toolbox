@@ -136,16 +136,18 @@ RUN --mount=type=cache,target=/root/.npm \
 #   the container user is node (1000), so git otherwise refuses every mounted
 #   repo as "dubious ownership". Single-user container — no other owner to
 #   guard against.
-# - Claude Code status line: claude-powerline, set in managed settings. They
-#   outrank the ~/.claude/settings.json mounted from the Mac, so the workbench
-#   gets its own status line while the Mac's stays untouched.
+# - Claude Code managed settings — they outrank the ~/.claude/settings.json
+#   mounted from the Mac, so these apply to workbenches only:
+#   status line = claude-powerline; auto-updater off, because Claude Code is
+#   pinned above and the root-owned npm prefix made every session report
+#   "Auto-update failed".
 COPY claude-aliases.sh /etc/claude-aliases.sh
 COPY tmux.zsh /etc/tmux.zsh
 RUN ln -s ../g/ghostty /usr/share/terminfo/x/xterm-ghostty && \
     usermod -s /bin/zsh node && \
     git config --system --add safe.directory '*' && \
     mkdir -p /etc/claude-code && \
-    echo '{"statusLine": {"type": "command", "command": "/usr/local/bin/claude-powerline --style=powerline", "padding": 0}}' \
+    echo '{"statusLine": {"type": "command", "command": "/usr/local/bin/claude-powerline --style=powerline", "padding": 0}, "env": {"DISABLE_AUTOUPDATER": "1"}}' \
         > /etc/claude-code/managed-settings.json && \
     install -d -m 700 -o node -g node /home/node/.ssh
 
