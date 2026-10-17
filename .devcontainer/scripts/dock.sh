@@ -7,13 +7,15 @@
 #      at boot; a clean base stays quiet.
 #   2. Vendored skill set — the pinned external set is fetched into the
 #      base's git-ignored .agents/skills/ only if missing or the pin changed,
-#      and wired into both harnesses (install-skills.sh).
+#      and wired into every harness (install-skills.sh; Copilot in step 5).
 #   3. Claude Code — an alias makes `claude` load the base plugin from the
 #      mounted base (--plugin-dir), so shipped skills are invocable as
 #      /agentic-toolbox:<name>.
 #   4. pi — container-local ~/.pi/agent/ config: the container-specific model
 #      provider (host.docker.internal, seeded, never bind-mounted) and the
 #      base's skill paths.
+#   5. GitHub Copilot CLI — container-local ~/.copilot/skills/ links to every
+#      shipped and vendored skill.
 #
 # Before step 1 it syncs the staged SSH authorized_keys and seeds claude.json —
 # post-create.sh only runs under VS Code, so a `docker compose up` workbench
@@ -178,5 +180,37 @@ PY
 # Pinned pi extensions (.devcontainer/pi-extensions.lock) — installed after the
 # config is seeded so pi writes packages[] into the freshly-seeded settings.json.
 bash "$SCRIPTS_DIR/install-pi-extensions.sh"
+
+# ── 5. GitHub Copilot CLI harness adapter ────────────────────────────────────
+# Copilot discovers personal skills in ~/.copilot/skills/<name>/SKILL.md and
+# follows symlinks there. Link every shipped skill (skills/*, not in-progress/)
+# and every vendored skill (the flat links install-skills.sh made in
+# .claude/skills/, resolved) — the list is derived from disk, so there is no
+# Copilot manifest to drift. ~/.copilot is container-local; login state lives
+# there too (`copilot login`, once per container). Shipped skills win on a
+# name clash because they are linked last.
+COPILOT_SKILLS="$HOME/.copilot/skills"
+mkdir -p "$COPILOT_SKILLS"
+changed=0
+for d in "$BASE_DIR"/.claude/skills/* "$BASE_DIR"/skills/*/; do
+  d="${d%/}"
+  [ "$(basename "$d")" = in-progress ] && continue
+  [ -f "$d/SKILL.md" ] || continue
+  target="$(readlink -f "$d")"
+  link="$COPILOT_SKILLS/$(basename "$d")"
+  [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && continue
+  ln -sfn "$target" "$link"
+  changed=$((changed + 1))
+done
+# Drop links whose skill was removed or renamed in the base.
+while IFS= read -r stale; do
+  rm "$stale"
+  changed=$((changed + 1))
+done < <(find "$COPILOT_SKILLS" -maxdepth 1 -xtype l)
+if [ "$changed" -eq 0 ]; then
+  echo "copilot: skills in sync ($COPILOT_SKILLS)"
+else
+  echo "copilot: $changed skill link(s) updated ($COPILOT_SKILLS)"
+fi
 
 echo "dock: all harnesses wired"

@@ -1,9 +1,9 @@
 # Top-level build target for the base image (issue #8).
 #
-# The base image is the single development image every workbench runs: both
-# supported harnesses (Claude Code + pi) alongside the shared environment —
-# key-only sshd on the internal SSH port (2222), tmux, gh, duckdb, the
-# skill-dependency venv, zsh setup, and the mobile-SSH plumbing.
+# The base image is the single development image every workbench runs: all
+# supported harnesses (Claude Code, pi, Copilot CLI) alongside the shared
+# environment — key-only sshd on the internal SSH port (2222), tmux, gh,
+# duckdb, the skill-dependency venv, zsh setup, and the mobile-SSH plumbing.
 #
 # The build context is .devcontainer/ — base files only. A clean clone of the
 # base (or the base docked inside a host project) produces the same image, and
@@ -33,7 +33,7 @@ dock:
 	@scripts/dock-host.sh "$(HOST)"
 
 # Issue #8 acceptance probes against $(BASE_IMAGE):
-#   in-image:  both harness CLIs report a version (plus Node >= 22 for pi)
+#   in-image:  all three harness CLIs report a version (plus Node >= 22 for pi)
 #   regression: sshd config (internal port, key-only, single user), tmux, gh,
 #               duckdb, and the skill-dependency venv are all still present;
 #               Ghostty-over-SSH shell: xterm-ghostty terminfo, zsh login
@@ -48,6 +48,7 @@ probe: image
 			|| { echo "FATAL: Node major < 22 (pi needs >= 22.19)"; exit 1; }; \
 		claude --version; \
 		pi --version; \
+		copilot --version; \
 		echo "-- sshd config: internal port, key-only, single user --"; \
 		grep -qx "Port 2222" /etc/ssh/sshd_config \
 			|| { echo "FATAL: sshd Port 2222 not set"; exit 1; }; \
@@ -107,7 +108,7 @@ probe-voice:
 	'
 
 # Issue #10 acceptance probes against the dogfooded workbench (issue #9): the
-# dock step must have wired both harness adapters. Requires a running
+# dock step must have wired every harness adapter. Requires a running
 # workbench (docker compose up -d) and the base image (make image).
 probe-dock:
 	docker compose exec -T workbench bash .devcontainer/scripts/probe-dock.sh
@@ -115,7 +116,7 @@ probe-dock:
 # Issue #12 acceptance: the dock E2E on a scratch host project — the runtime
 # gate, counterpart of the static drift guard (scripts/check.sh). One command
 # scaffolds a throwaway host, brings its workbench up, runs every probe
-# (both harness adapters, pin fidelity, dirty-base warning), and tears down
+# (every harness adapter, pin fidelity, dirty-base warning), and tears down
 # with no residue. Exits non-zero on any probe failure.
 # See docs/harnesses/dock-e2e.md.
 dock-e2e:

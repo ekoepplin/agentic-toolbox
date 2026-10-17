@@ -3,12 +3,14 @@
 The agentic development **base**: the environment (base image + compose stack)
 and the shared agentic content (skills, subagents, slash commands, hooks) that
 host projects **dock** into at runtime to get agentic development across every
-supported harness (Claude Code and [pi](https://pi.dev/)). The Claude Code
+supported harness (Claude Code, [pi](https://pi.dev/) and the
+[GitHub Copilot CLI](docs/harnesses/copilot.md)). The Claude Code
 **plugin** under `.claude-plugin/` is the base's Claude Code harness adapter.
 See `CONTEXT.md` for the domain vocabulary and `docs/adr/` for the decisions.
 
-Shipped components are invoked under the `/agentic-toolbox:` namespace, so
-they never collide with a host project's own skills.
+In Claude Code, shipped components are invoked under the `/agentic-toolbox:`
+namespace, so they never collide with a host project's own skills; pi uses
+`skill:<name>`, Copilot `/<name>`.
 
 ## Quick start
 

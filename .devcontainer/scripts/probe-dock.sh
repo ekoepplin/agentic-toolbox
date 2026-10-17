@@ -71,6 +71,15 @@ assert sys.argv[2] + "/.agents/skills" in skills, "vendored path not seeded"
 print("pi: base skill paths seeded in settings.json")
 PY
 
+# ── Copilot CLI: base + vendored skills discovered ──────────────────────────
+# `copilot skill list` reads the skill dirs locally — no login, no LLM call.
+skills="$(copilot skill list)"
+for s in web-search-local fetch-news-local fetch-free-images-local code-review; do
+  echo "$skills" | grep -q "^  $s - " \
+    || { echo "FATAL: copilot does not list skill $s"; exit 1; }
+done
+echo "copilot: base + vendored skills discovered (copilot skill list)"
+
 # ── SSH keys: synced from the staged host file ───────────────────────────────
 cmp -s /tmp/container_authorized_keys "$HOME/.ssh/authorized_keys" \
   || { echo "FATAL: authorized_keys not synced from the staged host file"; exit 1; }

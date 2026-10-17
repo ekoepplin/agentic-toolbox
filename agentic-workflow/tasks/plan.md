@@ -1,7 +1,9 @@
 # Plan: GitHub Copilot CLI as the third harness
 
 Supersedes the base/dock refactor plan (issues #8–#14, done — see git history
-of this file). Status: **planned, not started**.
+of this file). Status: **implemented 2026-10-17** — see `docs/harnesses/copilot.md`.
+Step 3 (token passthrough) dropped by decision: login is `copilot login`;
+open decision 1 resolved as "skip in v1".
 
 ## Goal
 

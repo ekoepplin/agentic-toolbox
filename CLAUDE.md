@@ -28,7 +28,8 @@ Host projects **dock** this base at runtime: `make dock HOST=<path>` scaffolds
 the host's workbench stack, and the dock step wires every harness adapter on
 each workbench start — shipped skills are then invocable as
 `/agentic-toolbox:<skill-name>` inside the workbench (see
-`docs/harnesses/dock-e2e.md`).
+`docs/harnesses/dock-e2e.md`). The same skills reach pi (`skill:<name>`) and the
+GitHub Copilot CLI (`/<name>`, see `docs/harnesses/copilot.md`).
 
 For the shared behavioral guidelines, a project's `CLAUDE.md` can import this
 file:

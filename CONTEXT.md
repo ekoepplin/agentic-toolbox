@@ -9,11 +9,11 @@ The identity of this repo: a self-contained agentic development environment (doc
 _Avoid_: foundation, platform, toolbox (the repo's name, not a domain term)
 
 **Harness**:
-An agent runtime that executes sessions and discovers the base's content through its own conventions. Today: Claude Code and pi. The base ships one **harness adapter** per harness.
+An agent runtime that executes sessions and discovers the base's content through its own conventions. Today: Claude Code, pi and the GitHub Copilot CLI. The base ships one **harness adapter** per harness.
 _Avoid_: agent (conflicts with Claude's subagent concept), engine
 
 **Harness adapter**:
-The per-harness packaging that delivers the base's content to one specific harness: for Claude Code, the **plugin** (`.claude-plugin/`); for pi, the `.pi/` configuration and extensions. An adapter is a delivery mechanism, not a component.
+The per-harness packaging that delivers the base's content to one specific harness: for Claude Code, the **plugin** (`.claude-plugin/`); for pi, the `.pi/` configuration and extensions; for the Copilot CLI, the skill links the **dock** step makes in `~/.copilot/skills/`. An adapter is a delivery mechanism, not a component.
 _Avoid_: integration, "plugin" (that word belongs to the Claude Code adapter only)
 
 **Plugin**:
@@ -59,7 +59,7 @@ _Avoid_: installer (that word is reserved for how a Consumer repo installs the p
 ## Relationships
 
 - The **base** contains many **components** (skills, subagents, commands, hooks, MCP servers)
-- The **base** ships one **harness adapter** per supported **harness** (the Claude Code **plugin**, the pi configuration under `.pi/`)
+- The **base** ships one **harness adapter** per supported **harness** (the Claude Code **plugin**, the pi configuration under `.pi/`, the Copilot CLI skill links)
 - A **Host project** **docks** the **base**: the base repo is mounted into the host's **workbench** and wired into every supported harness
 - A **skill** is **shipped** or a **draft**; only shipped skills are listed in `plugin.json`
 - The marketplace delivery route for the **plugin** is retired; the adapter is delivered exclusively by docking

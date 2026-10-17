@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # agentic-toolbox base image — the single development image every workbench
-# runs: Claude Code + pi, key-only sshd, tmux, gh, docker CLI, duckdb, the
+# runs: Claude Code + pi + Copilot CLI, key-only sshd, tmux, gh, docker CLI, duckdb, the
 # skill-dependency venv and a zsh/Powerlevel10k shell.
 #
 # Build with `make image` (the canonical builder). No --platform pin: the image
@@ -12,13 +12,14 @@
 FROM node:22-trixie-slim
 
 LABEL org.opencontainers.image.title="agentic-toolbox-base" \
-      org.opencontainers.image.description="Agentic development workbench: Claude Code + pi, sshd, tmux, gh, docker CLI" \
+      org.opencontainers.image.description="Agentic development workbench: Claude Code + pi + Copilot CLI, sshd, tmux, gh, docker CLI" \
       org.opencontainers.image.source="https://github.com/ekoepplin/agentic-toolbox" \
       org.opencontainers.image.licenses="MIT"
 
 # Pinned tool versions — bump here, then `make probe`.
 ARG CLAUDE_CODE_VERSION=2.1.296
 ARG PI_VERSION=1.2.0
+ARG COPILOT_VERSION=1.0.98
 ARG CCSTATUSLINE_VERSION=2.2.32
 ARG DUCKDB_VERSION=1.2.1
 
@@ -119,6 +120,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g \
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
+        "@github/copilot@${COPILOT_VERSION}" \
         "ccstatusline@${CCSTATUSLINE_VERSION}" && \
     npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}"
 
