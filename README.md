@@ -56,6 +56,15 @@ ssh -p <SSH_PORT> node@localhost
 - **Shell** — zsh with Oh My Zsh and Powerlevel10k; on SSH login a tmux session
   picker opens. Prompt config lives in `.devcontainer/p10k.zsh` — replace it
   with your own `~/.p10k.zsh` and `make image` to change it.
+- **Claude Code status line** —
+  [claude-powerline](https://github.com/Owloops/claude-powerline) (repo, git
+  branch, model, tokens, cost), set in the image's
+  `/etc/claude-code/managed-settings.json`. Managed settings outrank the
+  `~/.claude/settings.json` mounted from the Mac, so only workbenches get it;
+  the Mac's own status line is untouched. The glyphs need a Nerd Font in the
+  terminal (Ghostty has them built in).
+- **git** works on the mounted repos: the image sets `safe.directory '*'`,
+  because they are owned by the Mac's uid, not by `node`.
 
 ## Voice
 

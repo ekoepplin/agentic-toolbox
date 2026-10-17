@@ -49,6 +49,14 @@ probe: image
 		claude --version; \
 		pi --version; \
 		copilot --version; \
+		echo "{\"model\":{\"display_name\":\"probe-model\"},\"cwd\":\"/tmp\",\"workspace\":{\"current_dir\":\"/tmp\"},\"transcript_path\":\"/tmp/none\"}" \
+			| claude-powerline --charset=text | grep -q probe-model \
+			|| { echo "FATAL: claude-powerline does not render"; exit 1; }; \
+		grep -q claude-powerline /etc/claude-code/managed-settings.json \
+			|| { echo "FATAL: status line not set in managed settings"; exit 1; }; \
+		echo "claude-powerline: renders, set as status line"; \
+		git config --system --get-all safe.directory | grep -qx "\*" \
+			|| { echo "FATAL: git safe.directory not set"; exit 1; }; \
 		echo "-- sshd config: internal port, key-only, single user --"; \
 		grep -qx "Port 2222" /etc/ssh/sshd_config \
 			|| { echo "FATAL: sshd Port 2222 not set"; exit 1; }; \

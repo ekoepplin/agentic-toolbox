@@ -21,6 +21,7 @@ ARG CLAUDE_CODE_VERSION=2.1.296
 ARG PI_VERSION=1.2.0
 ARG COPILOT_VERSION=1.0.98
 ARG CCSTATUSLINE_VERSION=2.2.32
+ARG CLAUDE_POWERLINE_VERSION=1.32.4
 ARG DUCKDB_VERSION=1.2.1
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -116,12 +117,14 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # ── Agent CLIs (global npm) ──────────────────────────────────────────────────
 # One layer, npm cache as a build-time mount. pi uses --ignore-scripts (its
-# documented install path; no lifecycle scripts needed).
+# documented install path; no lifecycle scripts needed). claude-powerline is
+# the workbench status line (pinned here, so no npx download per refresh).
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g \
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
         "@github/copilot@${COPILOT_VERSION}" \
-        "ccstatusline@${CCSTATUSLINE_VERSION}" && \
+        "ccstatusline@${CCSTATUSLINE_VERSION}" \
+        "@owloops/claude-powerline@${CLAUDE_POWERLINE_VERSION}" && \
     npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}"
 
 # ── Shell + terminal plumbing ────────────────────────────────────────────────
@@ -129,10 +132,21 @@ RUN --mount=type=cache,target=/root/.npm \
 #   sets TERM=xterm-ghostty — alias it so vim/htop/less work over SSH.
 # - Login shell → zsh (the node image defaults to bash, so SSH sessions would
 #   skip the whole zsh setup below).
+# - git safe.directory '*': bind-mounted repos are owned by the Mac's uid (501),
+#   the container user is node (1000), so git otherwise refuses every mounted
+#   repo as "dubious ownership". Single-user container — no other owner to
+#   guard against.
+# - Claude Code status line: claude-powerline, set in managed settings. They
+#   outrank the ~/.claude/settings.json mounted from the Mac, so the workbench
+#   gets its own status line while the Mac's stays untouched.
 COPY claude-aliases.sh /etc/claude-aliases.sh
 COPY tmux.zsh /etc/tmux.zsh
 RUN ln -s ../g/ghostty /usr/share/terminfo/x/xterm-ghostty && \
     usermod -s /bin/zsh node && \
+    git config --system --add safe.directory '*' && \
+    mkdir -p /etc/claude-code && \
+    echo '{"statusLine": {"type": "command", "command": "/usr/local/bin/claude-powerline --style=powerline", "padding": 0}}' \
+        > /etc/claude-code/managed-settings.json && \
     install -d -m 700 -o node -g node /home/node/.ssh
 
 # Mirror the host's ~/.claude/hooks at its host path, so hook commands with
