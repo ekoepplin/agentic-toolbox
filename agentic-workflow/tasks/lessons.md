@@ -119,3 +119,10 @@ When `PIPELINE_NAME == SCHEMA_NAME`, DuckDB raises `Binder Error: Ambiguous refe
 Returning `[get_articles(lang, query) for lang, query in QUERIES]` from a `@dlt.source` creates multiple pipes all named `get_articles` — dlt raises `InvalidResourceDataTypeMultiplePipes`. **Rule:** a `@dlt.resource` must be a single pipe. If you need to iterate over parameters (languages, geos, etc.), loop *inside* the resource function and `yield` all rows from one function. Never return a list of calls to the same resource from `@dlt.source`.
 
 ---
+
+## 2026-10-17 — workbench voice: image ENV is invisible over SSH
+
+### Test workbench behavior through SSH, not `docker exec`
+`ENV PULSE_SERVER=…` in the Dockerfile made `rec` work under `docker exec`, so every probe passed — but users enter workbenches through sshd, whose sessions get a fresh environment without image `ENV`. Claude Code `/voice` then failed with `SoX could not open an audio capture device`. **Rule:** anything an SSH session needs goes into a config file (`/etc/pulse/client.conf.d/`, `/etc/profile.d/`, …), never image `ENV` alone; verify with `env -i` or a real `ssh -p <port>` session, not plain `docker exec`.
+
+---

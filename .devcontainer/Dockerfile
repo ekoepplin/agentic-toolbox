@@ -38,8 +38,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #   headless, so capture needs a forwarded /dev/snd or the host→SSH mic bridge.
 # - sox + libsox-fmt-pulse, alsa-utils + libasound2-plugins, pulseaudio-utils:
 #   Claude Code /voice records with `rec` or `arecord`. Both reach the Mac
-#   microphone through the Mac's PulseAudio server (PULSE_SERVER below; the
-#   ALSA default device is routed to pulse in /etc/asound.conf). docs/voice.md.
+#   microphone through the Mac's PulseAudio server, named in the pulse client
+#   config rather than PULSE_SERVER — sshd sessions never see image ENV. The
+#   ALSA default device is routed to pulse in /etc/asound.conf. docs/voice.md.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl gpg && \
     install -m 0755 -d /etc/apt/keyrings && \
@@ -63,9 +64,9 @@ RUN apt-get update && \
         tesseract-ocr tesseract-ocr-deu ffmpeg \
         sox libsox-fmt-pulse alsa-utils libasound2-plugins pulseaudio-utils && \
     rm -rf /var/lib/apt/lists/* && \
-    printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > /etc/asound.conf
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
-    PULSE_SERVER=tcp:host.docker.internal:4713
+    printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > /etc/asound.conf && \
+    echo 'default-server = tcp:host.docker.internal:4713' > /etc/pulse/client.conf.d/workbench.conf
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 # ── duckdb CLI ───────────────────────────────────────────────────────────────
 RUN case "$(dpkg --print-architecture)" in \

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Mac side of workbench voice (docs/voice.md): a PulseAudio server that owns
 # the Mac microphone and listens on loopback TCP 4713, which containers reach
-# as host.docker.internal:4713 (the image sets PULSE_SERVER to exactly that).
+# as host.docker.internal:4713 (the image's pulse client config names exactly
+# that).
 #
 # Idempotent — safe to re-run; it rewrites its two config files and restarts
 # the launchd service so they take effect.

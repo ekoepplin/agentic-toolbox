@@ -13,14 +13,16 @@ that owns the microphone, and the container records from it over TCP:
 Mac microphone ─► PulseAudio (brew service, 127.0.0.1:4713)
                         ▲
                         │ host.docker.internal:4713
-workbench: rec / arecord ─► PULSE_SERVER=tcp:host.docker.internal:4713
+workbench: rec / arecord ─► /etc/pulse/client.conf.d/workbench.conf
+                             default-server = tcp:host.docker.internal:4713
 ```
 
 - **Image side** (already in the base image): `sox` gives Claude Code its `rec`
   recorder, `alsa-utils` its `arecord` fallback; `/etc/asound.conf` routes the
-  ALSA default device to pulse, and `PULSE_SERVER` points at the Mac. Nothing
-  changes in a host project's `compose.yaml` — `host.docker.internal` is
-  already mapped there.
+  ALSA default device to pulse, and the pulse client config points at the Mac
+  — a config file, not `PULSE_SERVER`, because SSH sessions never inherit the
+  image's `ENV` (only `docker exec` does). Nothing changes in a host project's
+  `compose.yaml` — `host.docker.internal` is already mapped there.
 - **Mac side** (once per Mac): `scripts/setup-mac-voice.sh`.
 
 ## Set up a Mac
@@ -66,6 +68,7 @@ loopback, which is why no cookie mount is needed.
 |---|---|
 | `Connection refused` / `pactl info` fails in the container | Server not running → `brew services restart pulseaudio`; check `lsof -nP -iTCP:4713` on the Mac |
 | `make probe-voice`: `recorded silence` | Wrong or no input device → *System Settings → Sound → Input*; or microphone permission denied → *System Settings → Privacy & Security → Microphone* |
+| `/voice`: `SoX could not open an audio capture device` | Workbench predates the pulse client config, or the Mac server is down → `make image` + `docker compose up -d --force-recreate`; `pactl info` in the workbench must name the server |
 | `/voice` says SoX is missing | Workbench runs an old image → `make image`, then `docker compose up -d --force-recreate` |
 | Port 4713 busy | A hand-started daemon → re-run `scripts/setup-mac-voice.sh` (it kills it first) |
 

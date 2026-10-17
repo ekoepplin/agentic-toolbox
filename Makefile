@@ -78,11 +78,11 @@ probe: image
 		/opt/venv/bin/python -c "import torch, sys; sys.exit(\"FATAL: torch is a CUDA build\") if torch.version.cuda else print(\"venv: torch is CPU-only\")"; \
 		echo "-- voice capture tools (docs/voice.md) --"; \
 		command -v rec arecord pactl; \
-		[ "$$PULSE_SERVER" = "tcp:host.docker.internal:4713" ] \
-			|| { echo "FATAL: PULSE_SERVER not set"; exit 1; }; \
+		grep -qx "default-server = tcp:host.docker.internal:4713" /etc/pulse/client.conf.d/workbench.conf \
+			|| { echo "FATAL: pulse default-server not set"; exit 1; }; \
 		grep -q "type pulse" /etc/asound.conf \
 			|| { echo "FATAL: ALSA default not routed to pulse"; exit 1; }; \
-		echo "voice: rec + arecord routed to $$PULSE_SERVER"; \
+		echo "voice: rec + arecord routed to tcp:host.docker.internal:4713"; \
 		echo "== all probes passed =="; \
 	'
 
