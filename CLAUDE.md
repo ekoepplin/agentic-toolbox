@@ -47,7 +47,7 @@ agentic-toolbox/
 ├── agents/          # Custom subagent persona definitions
 ├── commands/        # Slash commands
 ├── hooks/           # Lifecycle hooks
-├── scripts/         # check.sh (drift guard), dock-host.sh (scaffolder), dock-e2e.sh
+├── scripts/         # check.sh (drift guard), dock-host.sh (scaffolder), dock-e2e.sh, setup-mac-voice.sh (docs/voice.md)
 ├── agentic-workflow/# Ralph AFK loop + task files
 ├── docs/            # ADRs, harness guides, agent docs
 └── compose.yaml     # This repo's own workbench stack

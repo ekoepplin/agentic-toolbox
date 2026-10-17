@@ -42,7 +42,15 @@ Then recreate running workbenches so they run the new image:
 docker compose up -d --force-recreate   # in each host repo
 ```
 
-In the workbench, `/voice` in Claude Code now records from the Mac.
+In the workbench (over SSH, as usual): start `claude`, hold Space and speak.
+If nothing records, run `/voice` once — it must print `Voice mode enabled`.
+
+`/voice` is a **toggle**, and its setting (`voiceEnabled`) lives in
+`~/.claude/settings.json`, which every workbench mounts from the Mac — running
+it in one place flips it for the Mac and all workbenches alike.
+
+Verified 2026-10-17 on a MacBook Pro: dictation in Claude Code over SSH into a
+docked workbench; `rec`, `arecord` and `ffmpeg -f pulse` all record the Mac mic.
 
 **Mac mini:** it has no built-in microphone. Connect a USB or Bluetooth mic
 (or headset) and select it as input in *System Settings → Sound → Input*
