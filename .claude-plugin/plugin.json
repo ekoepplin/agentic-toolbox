@@ -1,13 +1,9 @@
 {
   "name": "agentic-toolbox",
   "description": "The agentic-toolbox base's Claude Code harness adapter: skills, subagents, commands, and hooks.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "ekoepplin"
   },
-  "skills": [
-    "./skills/web-search-local",
-    "./skills/fetch-news-local",
-    "./skills/fetch-free-images-local"
-  ]
+  "skills": []
 }

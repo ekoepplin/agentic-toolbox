@@ -3,7 +3,7 @@
 # The base image is the single development image every workbench runs: all
 # supported harnesses (Claude Code, pi, Copilot CLI) alongside the shared
 # environment — key-only sshd on the internal SSH port (2222), tmux, gh,
-# duckdb, the skill-dependency venv, zsh setup, and the mobile-SSH plumbing.
+# duckdb, the headroom venv, zsh setup, and the mobile-SSH plumbing.
 #
 # The build context is .devcontainer/ — base files only. A clean clone of the
 # base (or the base docked inside a host project) produces the same image, and
@@ -19,11 +19,18 @@ BASE_IMAGE := agentic-toolbox-base:latest
 DOCKERFILE := .devcontainer/Dockerfile
 CONTEXT    := .devcontainer
 
-.PHONY: image probe probe-voice probe-dock dock dock-e2e
+.PHONY: check image probe probe-voice probe-dock dock dock-e2e
 
-# Build the base image from the base's own files only.
+# The static gate: adapter-manifest drift guard (plugin.json <-> skills/).
+# No Docker needed; runs on a bare Mac.
+check:
+	scripts/check.sh
+
+# Build the base image from the base's own files only. The Dockerfile needs
+# BuildKit (COPY --chmod, cache mounts); forcing it makes a missing buildx
+# plugin fail fast instead of the legacy builder failing minutes in.
 image:
-	docker build -f $(DOCKERFILE) --build-arg HOST_HOME=$(HOME) -t $(BASE_IMAGE) $(CONTEXT)
+	DOCKER_BUILDKIT=1 docker build -f $(DOCKERFILE) --build-arg HOST_HOME=$(HOME) -t $(BASE_IMAGE) $(CONTEXT)
 
 # Dock a host project in one command (issue #11): generates the host's
 # three-file tree (compose.yaml, .env, .devcontainer/devcontainer.json),
@@ -35,7 +42,7 @@ dock:
 # Issue #8 acceptance probes against $(BASE_IMAGE):
 #   in-image:  all three harness CLIs report a version (plus Node >= 22 for pi)
 #   regression: sshd config (internal port, key-only, single user), tmux, gh,
-#               duckdb, and the skill-dependency venv are all still present;
+#               duckdb, and the headroom venv are all still present;
 #               Ghostty-over-SSH shell: xterm-ghostty terminfo, zsh login
 #               shell, Powerlevel10k theme; torch is the CPU-only build.
 probe: image
@@ -84,12 +91,11 @@ probe: image
 		duckdb_bin=$$(ls /usr/local/bin/duckdb* | head -n1) \
 			|| { echo "FATAL: no duckdb binary in /usr/local/bin"; exit 1; }; \
 		$$duckdb_bin --version; \
-		echo "-- skill-dependency venv --"; \
-		/opt/venv/bin/python -c "import newsapi, loguru, duckdb, tavily, requests; print(\"venv: skill deps importable\")"; \
+		echo "-- headroom venv --"; \
 		command -v headroom; \
 		/opt/venv/bin/python -c "import torch, sys; sys.exit(\"FATAL: torch is a CUDA build\") if torch.version.cuda else print(\"venv: torch is CPU-only\")"; \
 		echo "-- voice capture tools (docs/voice.md) --"; \
-		command -v rec arecord pactl; \
+		for c in rec arecord pactl; do command -v $$c || { echo "FATAL: $$c missing"; exit 1; }; done; \
 		grep -qx "default-server = tcp:host.docker.internal:4713" /etc/pulse/client.conf.d/workbench.conf \
 			|| { echo "FATAL: pulse default-server not set"; exit 1; }; \
 		grep -q "type pulse" /etc/asound.conf \

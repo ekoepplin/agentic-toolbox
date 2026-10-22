@@ -29,11 +29,11 @@ Any of the five things a plugin can contain: a **skill**, a **subagent** (`agent
 _Avoid_: tool (too vague — name the actual component)
 
 **Skill**:
-A packaged unit of agent instructions defined by a `SKILL.md` file with YAML frontmatter (`name`, `description`). Claude Code loads it and follows its instructions in place of the default approach. A skill may ship a supporting script (e.g. Python under its `scripts/`); that script is a private detail of the skill, not a separately-installable thing. The shipped skills keep the `-local` suffix (`web-search-local`, `fetch-news-local`, `fetch-free-images-local`): it names their purpose — giving a **local model** web/news/image access to unblock itself — so it stays part of the name even once distributed. The `agentic-toolbox:` namespace scopes them; the suffix describes what they are for.
+A packaged unit of agent instructions defined by a `SKILL.md` file with YAML frontmatter (`name`, `description`). Claude Code loads it and follows its instructions in place of the default approach. A skill may ship a supporting script (e.g. Python under its `scripts/`); that script is a private detail of the skill, not a separately-installable thing. In Claude Code, shipped skills are scoped by the `agentic-toolbox:` namespace.
 _Avoid_: command (a distinct component)
 
 **Shipped skill** / **Draft skill**:
-A **shipped skill** lives at `skills/<name>/` and is listed in `plugin.json`, so consumers receive it. A **draft skill** lives at `skills/in-progress/<name>/` and is absent from `plugin.json`, so it is never installed. `scripts/check.sh` enforces that every shipped component appears in both `plugin.json` and the README.
+A **shipped skill** lives at `skills/<name>/` and is listed in `plugin.json`, so consumers receive it. A **draft skill** lives at `skills/in-progress/<name>/` and is absent from `plugin.json`, so it is never installed. `scripts/check.sh` (`make check`) enforces that every shipped skill appears in `plugin.json`, nothing listed is missing on disk, and no draft is listed. The base ships no skills of its own today; the slot and the guard stay so the next one lands under the same contract.
 _Avoid_: promoted/unpromoted (Matt's bucket vocabulary; we use shipped/draft), WIP
 
 **Host project**:
@@ -68,6 +68,5 @@ _Avoid_: installer (that word is reserved for how a Consumer repo installs the p
 ## Flagged ambiguities
 
 - "tool" — the author's original phrase "tools, skills, and other things" collapsed to the five **component** types. There is no separate "tool" primitive; retired as a domain term.
-- "-local" suffix — the skills are named `*-local`, meaning "gives a local model web/news/image access to unblock itself." A rename to drop the suffix was considered and reversed: the suffix names the skill's purpose, not merely a deployment context that goes away once distributed, so it is kept. The shipped skills are `web-search-local`, `fetch-news-local`, and `fetch-free-images-local`; the `agentic-toolbox:` namespace handles scoping.
 - "skill" vs "plugin" — a **skill** is one `SKILL.md`-defined component; the **plugin** is the whole distributable repo that contains it. Keep them distinct.
 - "installer" vs "bootstrap" — installing the **plugin** into a **Consumer repo** (marketplace) is distinct from the **local-dev bootstrap** that wires Matt's skills in for development. Don't conflate them.

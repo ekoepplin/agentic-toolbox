@@ -18,11 +18,7 @@
   // .devcontainer/claude-aliases.sh; diagnose with check-vllm.
   "remoteEnv": {
     "VLLM_DEFAULT_MODEL": "qwen",
-    // API keys forwarded from the host environment.
-    "TAVILY_API_KEY": "${localEnv:TAVILY_API_KEY}",
-    "NEWS_API_KEY": "${localEnv:NEWS_API_KEY}",
-    "PEXELS_API_KEY": "${localEnv:PEXELS_API_KEY}",
-    "PIXABAY_API_KEY": "${localEnv:PIXABAY_API_KEY}",
+    // Tokens forwarded from the host environment.
     "GH_TOKEN": "${localEnv:GITHUB_ROBOT_MAC_MINI}",
     "GITHUB_TOKEN_MACBOOK": "${localEnv:GITHUB_TOKEN_MACBOOK}",
     "GITHUB_ROBOT_MAC_MINI": "${localEnv:GITHUB_ROBOT_MAC_MINI}",

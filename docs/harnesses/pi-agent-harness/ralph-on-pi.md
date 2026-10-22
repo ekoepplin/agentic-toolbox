@@ -8,17 +8,18 @@
 Prerequisite: the local endpoint is up and a provider is registered in
 `~/.pi/agent/models.json` — see [connecting-local-models.md](./connecting-local-models.md).
 
-The good news: the ralph loop is already 90% harness-agnostic. `afk.sh` only polls
-`gh issue view` and shells out to `once.sh`; `prompt.md` is plain git/gh
-instructions. The port is **the launch line in `once.sh` plus two lines of
-`prompt.md`**.
+The ralph loop is mostly harness-agnostic: `agentic-workflow/ralph/lib.sh`
+holds the shared part (`.env.ralph`, flag parsing, issue fetch + mission
+assembly, the AFK loop), and each harness only adds its backend mapping and
+launch line — `once.sh`/`afk.sh` for Claude Code, `pi-once.sh`/`pi-afk.sh` for
+pi — plus its prompt (`prompt.md` / `prompt-pi.md`).
 
 ## What stays, what changes
 
 | ralph piece | on pi |
 |---|---|
-| `afk.sh` (issue-state polling, iter cap) | **Unchanged** (one-line swap to call `pi-once.sh`) |
-| `once.sh` issue fetch + recent-commits + mission assembly | **Unchanged** |
+| AFK loop (issue-state polling, iter cap) | **Shared** — `pi-afk.sh` runs `lib.sh`'s loop over `pi-once.sh` |
+| Issue fetch + recent-commits + mission assembly | **Shared** (`lib.sh`) |
 | `once.sh` launch line (`claude … --permission-mode acceptEdits`) | **Replaced** with `pi -a -p …` (below) |
 | Backend routing via `ANTHROPIC_BASE_URL`/`AUTH_TOKEN` env vars | **Replaced** with `--model <provider>/<id>`; providers live in `models.json`, not env vars |
 | `settings.ralph.json` (permission allow-list) + `acceptEdits` | **Gone** — pi has no permission prompts, so an AFK loop can never stall on approval. Optional `--tools` restriction and/or a guardrail extension instead |
@@ -35,10 +36,10 @@ own `models.json`:
 - **Mac host** — the tested config from
   [connecting-local-models.md](./connecting-local-models.md) (`vllm-hpzgx`,
   baseUrl `http://localhost:8000/v1`) works as-is.
-- **Devcontainer** — the container's `~/.pi/agent/` is seeded by
-  `.devcontainer/scripts/setup-pi.sh`, and its `vllm-hpzgx` provider already
-  points at `http://host.docker.internal:8000/v1` (see
-  [devcontainer-pi-support-plan.md](./devcontainer-pi-support-plan.md)).
+- **Workbench** — the container's `~/.pi/agent/` is seeded by the dock step
+  (`.devcontainer/scripts/dock.sh` §4) on every start, and its `vllm-hpzgx`
+  provider already points at `http://host.docker.internal:8000/v1` (see
+  [configuration.md](./configuration.md)).
   Same provider name, different baseUrl, so `pi-once.sh`'s default
   (`vllm-hpzgx`) works in both environments — no env override needed.
 - **Ollama** (optional) — add an `ollama-local` provider to whichever
@@ -57,7 +58,7 @@ own `models.json`:
 }
 ```
 
-(use `host.docker.internal:11434/v1` instead from the devcontainer).
+(use `host.docker.internal:11434/v1` instead from a workbench).
 
 Verify: `pi --list-models` must list the model before ralph will resolve it.
 
@@ -66,19 +67,14 @@ treating a trailing `:<thinking>` as a thinking level, so `qwen3.5:4b` works —
 as long as the model is registered in `models.json` (an unregistered id with an
 unknown colon-suffix fails instead of guessing a different model).
 
-### 2. (Optional) Expose the toolbox's own skills to pi
+### 2. Skills — already wired
 
 The vendored mattpocock-skills under `.agents/skills/` are **auto-discovered**
 by pi from the project root (after project trust — the `-a` in the launch line
-handles that). The repo's own `skills/` directory (`web-search-local`,
-`fetch-news-local`, `fetch-free-images-local`) is **not** a pi discovery
-location. To make those available, add a project settings file (`.pi/settings.json`):
-
-```json
-{ "skills": ["./skills"] }
-```
-
-or pass `--skill skills/web-search-local` (repeatable) on the launch line.
+handles that). The base's own `skills/` directory is not a default pi
+discovery location; the committed `.pi/settings.json` (`{"skills": ["./skills"]}`)
+and the dock step's seeded `skills[]` both point pi at it, so any skill shipped
+there later is picked up with no extra flag.
 
 ### 3. (Optional) Guardrail extension
 
@@ -89,131 +85,34 @@ deny-force-push rule has no direct equivalent. Two levers:
 
 - **Tool restriction** — `--tools read,edit,write,bash,grep,find,ls` (or
   `--exclude-tools`) narrows what the agent can do at all.
-- **Command blocking** — a `tool_call` extension can block specific commands:
-
-```typescript
-// .pi/extensions/ralph-guardrail.ts  (auto-discovered once the project is trusted;
-// or load explicitly with -e .pi/extensions/ralph-guardrail.ts)
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-export default function (pi: ExtensionAPI) {
-  pi.on("tool_call", (event) => {
-    // Deliberately over-matching, like settings.ralph.json's prefix-denies:
-    // also catches `git push --force-with-lease`.
-    if (event.toolName === "bash" && /git push (\s--force|-f)/.test(event.input.command ?? "")) {
-      return { block: true, reason: "force-push is not allowed in ralph runs" };
-    }
-  });
-}
-```
+- **Command blocking** — a `tool_call` extension can block specific commands.
+  The repo ships one: `.pi/extensions/ralph-guardrail.ts` blocks any
+  `git push` carrying `--force`/`-f` (auto-discovered once the project is
+  trusted; or load explicitly with `-e .pi/extensions/ralph-guardrail.ts`).
 
 The return shape is `{ block: true, reason?: string, terminate?: boolean }`
 (`terminate` additionally ends the agent run).
 
-## The launch line — drop-in `pi-once.sh`
+## The launch line — `pi-once.sh`
 
 Same CLI as `once.sh` (`<issue-number> [--backend NAME] [--model NAME]`, same
-`.env.ralph` support). The only structural difference: backends map to
-`provider/model` patterns instead of env vars.
+`.env.ralph` support — both come from `lib.sh`). The only structural
+difference: backends map to `provider/model` patterns instead of env vars:
+
+| `--backend` | pi model pattern | default model |
+|---|---|---|
+| `vllm` | `vllm-hpzgx/<model>` | `$VLLM_DEFAULT_MODEL`, else `qwen` |
+| `ollama` | `ollama-local/<model>` | `$OLLAMA_DEFAULT_MODEL`, else `qwen3.5:4b` |
+| `anthropic` | `anthropic/<model>` | none — `--model` required (`pi --list-models`) |
+
+The launch itself:
 
 ```bash
-#!/bin/bash
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source environment
-if [[ -f .env.ralph ]]; then
-  set -a
-  source .env.ralph
-  set +a
-fi
-
-usage() {
-  cat >&2 <<EOF
-Usage: $0 <issue-number> [--backend NAME] [--model NAME]
-
-  --backend  one of: anthropic | vllm | ollama
-             default: \$RALPH_BACKEND, else 'vllm'
-  --model    model id for the chosen backend
-             default: \$RALPH_MODEL, else backend default
-
-Backend -> pi provider (see ~/.pi/agent/models.json):
-  vllm      -> vllm-hpzgx
-  ollama    -> ollama-local
-  anthropic -> built-in anthropic provider (model required)
-EOF
-  exit 1
-}
-
-ISSUE="${1:-}"
-[[ -z "$ISSUE" ]] && usage
-shift
-
-BACKEND="${RALPH_BACKEND:-vllm}"
-MODEL="${RALPH_MODEL:-}"
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --backend) BACKEND="${2:?--backend needs a value}"; shift 2 ;;
-    --model)   MODEL="${2:?--model needs a value}";     shift 2 ;;
-    -h|--help) usage ;;
-    *) echo "error: unknown arg: $1" >&2; usage ;;
-  esac
-done
-
-# Map backend -> pi model pattern (provider/id)
-case "$BACKEND" in
-  vllm)
-    : "${MODEL:=${VLLM_DEFAULT_MODEL:-qwen}}"
-    MODEL_PATTERN="vllm-hpzgx/$MODEL"
-    ;;
-  ollama)
-    : "${MODEL:=${OLLAMA_DEFAULT_MODEL:-qwen3.5:4b}}"
-    MODEL_PATTERN="ollama-local/$MODEL"
-    ;;
-  anthropic)
-    # pi's catalog ids are not Claude Code's sonnet/opus shorthands — check `pi --list-models`
-    [[ -n "$MODEL" ]] || { echo "error: anthropic backend needs --model (see 'pi --list-models')" >&2; exit 1; }
-    MODEL_PATTERN="anthropic/$MODEL"
-    ;;
-  *)
-    echo "error: --backend must be one of: anthropic, vllm, ollama (got '$BACKEND')" >&2
-    exit 1
-    ;;
-esac
-
-REPO="ekoepplin/agentic-toolbox"
-
-echo "ralph-pi: backend=$BACKEND model=$MODEL_PATTERN issue=#$ISSUE" >&2
-
-issue=$(gh issue view "$ISSUE" --repo "$REPO" \
-  --json number,title,body,labels,state \
-  --jq '"# Issue #\(.number): \(.title)\nState: \(.state)\nLabels: \(.labels | map(.name) | join(", "))\n\n\(.body)"')
-commits=$(git log -n 5 --format='%h %ad %s' --date=short)
-prompt=$(cat "$SCRIPT_DIR/prompt.md")
-
-pi -a -p --model "$MODEL_PATTERN" --name "ralph #$ISSUE" \
-  "MISSION: deliver issue #$ISSUE. Do NOT switch to other issues even if you see references to them.
-
-$issue
-
-Recent commits:
-$commits
-
-$prompt"
+pi -a -p --model "$MODEL_PATTERN" --name "ralph #$ISSUE" "$mission"
 ```
 
-`afk.sh` needs exactly one change — the inner call:
-
-```diff
--  "$SCRIPT_DIR/once.sh" "$ISSUE" "$@"
-+  "$SCRIPT_DIR/pi-once.sh" "$ISSUE" "$@"
-```
-
-(or keep a `pi-afk.sh` copy and leave the Claude Code loop intact — the two
-harnesses are then selectable per issue, which is sometimes useful: local
-qwen for routine slices, Anthropic for the hard one).
+`pi-afk.sh` loops it until the issue closes — the two harnesses are selectable
+per issue (local qwen for routine slices, Anthropic for the hard one).
 
 ### Launch flags, decoded
 
@@ -285,9 +184,8 @@ honors that flag exactly like Claude Code.
 - **Anthropic ids** — pi's catalog ids are not Claude Code's `sonnet` / `opus`
   shorthands. Get the exact ids from `pi --list-models`.
 - **`models.json` is per-environment** — the Mac's file points at
-  `localhost`; the devcontainer is seeded with its own copy pointing at
-  `host.docker.internal` (see
-  [devcontainer-pi-support-plan.md](./devcontainer-pi-support-plan.md)). The
+  `localhost`; a workbench is seeded with its own copy pointing at
+  `host.docker.internal` (see [configuration.md](./configuration.md)). The
   provider name is the same in both, so no flag differs.
 
 ## Smoke test
@@ -325,5 +223,5 @@ the issue on push.
 - [devcontainer-pi-support-plan.md](./devcontainer-pi-support-plan.md) — pi in the devcontainer (seeded `models.json`, pinned extensions)
 - [pi-extensions.md](./pi-extensions.md) — the pinned extension set + per-extension caveats (e.g. voice mic bridge)
 - `agentic-workflow/MATT-WORKFLOW.md` — the pipeline this executes
-- `agentic-workflow/ralph/{once.sh,afk.sh,prompt.md}` — the Claude Code loop this ports
+- `agentic-workflow/ralph/{lib.sh,pi-once.sh,pi-afk.sh,prompt-pi.md}` — the pi loop; `{once.sh,afk.sh,prompt.md}` — its Claude Code twin
 - pi docs: <https://pi.dev/docs/latest/usage> (modes & flags), <https://pi.dev/docs/latest/skills>, <https://pi.dev/docs/latest/extensions> (`tool_call`), <https://pi.dev/docs/latest/security>

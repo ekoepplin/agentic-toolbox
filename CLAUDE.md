@@ -49,7 +49,8 @@ agentic-toolbox/
 ├── commands/        # Slash commands
 ├── hooks/           # Lifecycle hooks
 ├── scripts/         # check.sh (drift guard), dock-host.sh (scaffolder), dock-e2e.sh, setup-mac-voice.sh (docs/voice.md)
-├── agentic-workflow/# Ralph AFK loop + task files
+├── Makefile         # check, image, probe, probe-dock, dock, dock-e2e
+├── agentic-workflow/# Ralph AFK loop (ralph/, shared lib.sh) + task files
 ├── docs/            # ADRs, harness guides, agent docs
 └── compose.yaml     # This repo's own workbench stack
 ```
@@ -181,4 +182,4 @@ External skills (mattpocock/skills) are **pinned** by ref in `.devcontainer/skil
 
 ### Verification
 
-This repo has **no unit-test framework**. The gate is `scripts/check.sh` — the adapter-manifest drift guard, which exits non-zero on any mismatch between `plugin.json` and the skills on disk. Run it after any change that adds, renames, or promotes a skill. This overrides the unit-test framing of the §4 examples above.
+This repo has **no unit-test framework**. The static gate is `make check` (`scripts/check.sh`) — the adapter-manifest drift guard, which exits non-zero on any mismatch between `plugin.json` and the skills on disk; it runs on a bare Mac (bash 3.2). Run it after any change that adds, renames, or promotes a skill. Changes to the image, the dock step, or the scaffolder need the runtime gates instead: `make probe` and `make dock-e2e` (see the README's Checks table). This overrides the unit-test framing of the §4 examples above.

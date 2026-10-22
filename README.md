@@ -10,11 +10,15 @@ See `CONTEXT.md` for the domain vocabulary and `docs/adr/` for the decisions.
 
 In Claude Code, shipped components are invoked under the `/agentic-toolbox:`
 namespace, so they never collide with a host project's own skills; pi uses
-`skill:<name>`, Copilot `/<name>`.
+`skill:<name>`, Copilot `/<name>`. The base ships no skills of its own today;
+every workbench gets the pinned vendored set
+([mattpocock/skills](https://github.com/mattpocock/skills), `.devcontainer/skills.lock`).
 
 ## Quick start
 
-Requires Docker (Docker Desktop or colima) and `make`.
+Requires Docker (Docker Desktop or colima) with the BuildKit `buildx` plugin,
+and `make`. On colima: `brew install docker-buildx`, then link it into
+`~/.docker/cli-plugins/` as the formula's caveat says.
 
 ```bash
 git clone https://github.com/ekoepplin/agentic-toolbox.git ~/repos/agentic-toolbox
@@ -34,6 +38,15 @@ the absolute path before `docker compose up`.
 Host projects **dock** the base: `make dock HOST=<path-to-host-repo>`
 scaffolds the workbench stack, and the dock step wires every harness adapter
 on each workbench start (see `docs/harnesses/dock-e2e.md`).
+
+## Checks
+
+| Command | Needs | Proves |
+|---|---|---|
+| `make check` | nothing (bare Mac) | `plugin.json` ↔ `skills/` in sync (the static gate) |
+| `make probe` | Docker | the image: harness CLIs, sshd, shell, voice plumbing |
+| `make probe-dock` | running workbench | the dock step wired every harness |
+| `make dock-e2e` | Docker | the whole dock pipeline on a throwaway host project |
 
 ## Connect to a workbench
 
@@ -104,8 +117,8 @@ The workbench is a trusted, single-user dev environment — read before running:
   in `compose.yaml` to keep it local.
 - The host's **Docker socket** is mounted (docker-outside-of-docker), which is
   root-equivalent on the host.
-- `~/.claude`, `~/.claude.json` and API keys from the host environment are
-  mounted/forwarded into the container.
+- `~/.claude`, `~/.claude.json` and GitHub tokens from the host environment
+  are mounted/forwarded into the container.
 
 ## License
 

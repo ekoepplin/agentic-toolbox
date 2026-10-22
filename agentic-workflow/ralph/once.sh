@@ -1,17 +1,10 @@
 #!/bin/bash
+# One ralph iteration on one issue, driven by Claude Code. See lib.sh.
 set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source environment
-if [[ -f .env.ralph ]]; then
-  set -a
-  source .env.ralph
-  set +a
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 usage() {
-  cat >&2 <<EOF
+  cat >&2 <<EOF2
 Usage: $0 <issue-number> [--backend NAME] [--model NAME]
 
   --backend  one of: anthropic | vllm | ollama
@@ -21,25 +14,11 @@ Usage: $0 <issue-number> [--backend NAME] [--model NAME]
                anthropic -> sonnet
                vllm      -> \$VLLM_DEFAULT_MODEL
                ollama    -> \$OLLAMA_DEFAULT_MODEL
-EOF
+EOF2
   exit 1
 }
 
-ISSUE="${1:-}"
-[[ -z "$ISSUE" ]] && usage
-shift
-
-BACKEND="${RALPH_BACKEND:-vllm}"
-MODEL="${RALPH_MODEL:-}"
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --backend) BACKEND="${2:?--backend needs a value}"; shift 2 ;;
-    --model)   MODEL="${2:?--model needs a value}";     shift 2 ;;
-    -h|--help) usage ;;
-    *) echo "error: unknown arg: $1" >&2; usage ;;
-  esac
-done
+ralph_parse_once "$@"
 
 case "$BACKEND" in
   anthropic)
@@ -56,33 +35,16 @@ case "$BACKEND" in
     export ANTHROPIC_BASE_URL=http://host.docker.internal:11434
     : "${MODEL:=${OLLAMA_DEFAULT_MODEL:-qwen3.5:4b}}"
     ;;
-  *)
-    echo "error: --backend must be one of: anthropic, vllm, ollama (got '$BACKEND')" >&2
-    exit 1
-    ;;
+  *) ralph_bad_backend ;;
 esac
-
-CLAUDE_SETTINGS="$SCRIPT_DIR/settings.ralph.json"
-REPO="ekoepplin/agentic-toolbox"
 
 echo "ralph: backend=$BACKEND model=$MODEL issue=#$ISSUE" >&2
 
-issue=$(gh issue view "$ISSUE" --repo "$REPO" \
-  --json number,title,body,labels,state \
-  --jq '"# Issue #\(.number): \(.title)\nState: \(.state)\nLabels: \(.labels | map(.name) | join(", "))\n\n\(.body)"')
-commits=$(git log -n 5 --format='%h %ad %s' --date=short)
-prompt=$(cat "$SCRIPT_DIR/prompt.md")
+mission=$(ralph_mission "$ISSUE" "$RALPH_DIR/prompt.md")
 
-# Pass --settings only if a ralph settings file exists (optional permission allow-list).
+# settings.ralph.json is the permission allow-list that keeps an AFK loop from
+# stalling on prompts; passed only if present.
 settings_flag=()
-[[ -f "$CLAUDE_SETTINGS" ]] && settings_flag=(--settings "$CLAUDE_SETTINGS")
+[[ -f "$RALPH_DIR/settings.ralph.json" ]] && settings_flag=(--settings "$RALPH_DIR/settings.ralph.json")
 
-claude "${settings_flag[@]+"${settings_flag[@]}"}" --permission-mode acceptEdits --model "$MODEL" \
-  "MISSION: deliver issue #$ISSUE. Do NOT switch to other issues even if you see references to them.
-
-$issue
-
-Recent commits:
-$commits
-
-$prompt"
+claude ${settings_flag[@]+"${settings_flag[@]}"} --permission-mode acceptEdits --model "$MODEL" "$mission"

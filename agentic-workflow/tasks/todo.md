@@ -1,43 +1,34 @@
-# Task: deliver issue #13 — retire the old delivery routes
+# Task: remove the `-local` skills, refactor, speed up, refresh docs (2026-10-22)
 
-Spec: GitHub issue #13. Plan-of-record for the chain: `plan.md` (#8–#14).
-#14 owns the full rewrite (new ADRs, glossary, "around docking") — #13 is the
-surgical retirement: delete the routes, narrow the guard, strip retired-route
-descriptions from docs.
+Owner request: remove all local skills; refactor; make it faster; apply best
+practice; update docs; validate carefully.
 
-## Success criteria (from the issue)
+## Steps
 
-1. [x] `.claude-plugin/marketplace.json` deleted; no doc instructs a
-      marketplace install → verify: `git ls-files | grep marketplace` empty;
-      grep for `marketplace add`/`plugin install` across tracked docs
-2. [x] `scripts/bootstrap-dev.sh` deleted; fetch logic reachable only through
-      the dock step → verify: `install-skills.sh` still called by `dock.sh`,
-      header no longer references the bootstrap
-3. [x] Drift guard fails on each drift case: shipped component missing from
-      the manifest, missing on disk, listed but absent, draft leaked into the
-      manifest → verify: four negative cases in a scratch copy, each exits 1
-4. [x] Drift guard passes on the correct tree → verify: `bash scripts/check.sh`
-      green in the live tree
-5. [x] README + top-level docs no longer describe the retired routes →
-      verify: README/CLAUDE.md/CONTEXT.md greps clean (dock pointer instead)
-
-## In-scope files
-
-- delete: `.claude-plugin/marketplace.json`, `scripts/bootstrap-dev.sh`
-- edit: `scripts/check.sh` (guard narrows to the adapter-manifest contract),
-  `.claude-plugin/plugin.json` (description no longer claims marketplace
-  distribution), `.devcontainer/scripts/install-skills.sh` (header),
-  `README.md`, `CLAUDE.md`, `CONTEXT.md` (bootstrap marked *Retired.*, dock
-  bullet, Dock _Avoid_ line), `docs/harnesses/dock-e2e.md` ("plugin contract"
-  → "adapter-manifest contract")
-
-## Out of scope (issue #14)
-
-- New ADRs; superseded pointer on ADR-0002; ADR-0001 wording
-- Full rewrite of README / CLAUDE.md "how other projects reference this"
-  around docking; glossary vocabulary pass
-
-## Working-tree hazards (do NOT stage)
-
-- `.gitignore` has an in-progress WIP edit (mangled `.pi/` line) — unrelated
-- untracked: `.pi/`, `agentic-workflow/`, `agentic-workflow-notes/`
+1. [x] Remove `skills/{web-search,fetch-news,fetch-free-images}-local` and every
+   reference (plugin.json, Dockerfile, devcontainer.json API keys, Makefile
+   probe, probes, docs, CONTEXT.md glossary)
+   → verify: `grep -rn -- '-local\b'` finds only unrelated hits (`ollama-local`,
+   `connecting-local-models`, `start-local-setup`)
+2. [x] Faster image: drop the skill-only venv deps (newsapi-python, loguru, duckdb,
+   tavily-python, requests) and the unused `ccstatusline` (status line is
+   claude-powerline via managed settings)
+   → verify: `make probe` green
+3. [x] Probes derive the shipped-skill list from `plugin.json` instead of
+   hard-coding names/counts; the pi `get_commands` probe stops at the response
+   instead of a fixed `sleep 8`
+   → verify: `make probe-dock` / `make dock-e2e` green
+4. [x] `scripts/check.sh` portable to macOS bash 3.2 (no `mapfile`), fails on an
+   unparsable `plugin.json`; `make check` target
+   → verify: green on the tree under `/bin/bash` 3.2 and bash 5; each drift case
+   exits 1 in a scratch copy
+5. [x] Ralph: one shared `lib.sh` for env/arg parsing/issue context/AFK loop
+   (removes four-way duplication); fix the force-push guardrail regex
+   (`git push --force` was not blocked); delete the finished one-off `chain.sh`
+   (#8–#14 all closed)
+   → verify: `bash -n`; usage/arg errors; regex table test
+6. [x] Docs: README, CLAUDE.md, CONTEXT.md, MATT-WORKFLOW.md, ralph-on-pi.md,
+   copilot.md, dock-e2e.md, configuration.md, prompts — drop removed skills and
+   stale claims (git-ignored `agentic-workflow/`, `.env.ralph.example`,
+   `setup-pi.sh`, "once check.sh exists", inlined script copies)
+   → verify: stale-term greps clean; links resolve

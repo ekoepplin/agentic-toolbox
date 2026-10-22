@@ -9,7 +9,8 @@ just creation. The pinned-extension lock mechanism (this plan's changes 2–3) i
 now **shipped**: `.devcontainer/pi-extensions.lock` (pinned `npm:`/`git:`
 sources) + `.devcontainer/scripts/install-pi-extensions.sh`, which dock.sh runs
 after the config seed so `pi install` reproduces the same extension set on every
-rebuild.
+rebuild. The `setup-pi.sh` named below was never created under that name — its
+job is `dock.sh` §4 + `install-pi-extensions.sh`. Kept as the historical plan.
 
 ## Decisions (agreed)
 

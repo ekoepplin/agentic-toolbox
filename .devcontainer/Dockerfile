@@ -2,7 +2,7 @@
 #
 # agentic-toolbox base image — the single development image every workbench
 # runs: Claude Code + pi + Copilot CLI, key-only sshd, tmux, gh, docker CLI, duckdb, the
-# skill-dependency venv and a zsh/Powerlevel10k shell.
+# headroom venv and a zsh/Powerlevel10k shell.
 #
 # Build with `make image` (the canonical builder). No --platform pin: the image
 # is a local artifact built for the host architecture it runs on.
@@ -20,7 +20,6 @@ LABEL org.opencontainers.image.title="agentic-toolbox-base" \
 ARG CLAUDE_CODE_VERSION=2.1.296
 ARG PI_VERSION=1.2.0
 ARG COPILOT_VERSION=1.0.98
-ARG CCSTATUSLINE_VERSION=2.2.32
 ARG CLAUDE_POWERLINE_VERSION=1.32.4
 ARG DUCKDB_VERSION=1.2.1
 
@@ -95,8 +94,8 @@ RUN mkdir -p /run/sshd && \
         > /etc/sudoers.d/node && \
     chmod 0440 /etc/sudoers.d/node
 
-# ── Python: uv + skill-dependency venv at /opt/venv (on PATH for all users) ──
-# Used by: fetch-news-local, fetch-free-images-local, web-search-local, headroom.
+# ── Python: uv + headroom venv at /opt/venv (on PATH for all users) ─────────
+# headroom is the context-compression MCP server post-create.sh registers.
 # --torch-backend cpu: the default linux/arm64 torch wheel drags in ~19
 # CUDA/NVIDIA packages (several GB) that can never run here — no NVIDIA GPU.
 # Longer timeout + fewer parallel downloads keep multi-GB wheels from starving
@@ -107,11 +106,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     export UV_LINK_MODE=copy UV_HTTP_TIMEOUT=300 UV_CONCURRENT_DOWNLOADS=4 && \
     uv venv /opt/venv && \
     uv pip install --python /opt/venv/bin/python --torch-backend cpu \
-        newsapi-python \
-        loguru \
-        duckdb \
-        tavily-python \
-        requests \
         "headroom-ai[all]"
 ENV PATH="/opt/venv/bin:$PATH"
 
@@ -123,7 +117,6 @@ RUN --mount=type=cache,target=/root/.npm \
     npm install -g \
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
         "@github/copilot@${COPILOT_VERSION}" \
-        "ccstatusline@${CCSTATUSLINE_VERSION}" \
         "@owloops/claude-powerline@${CLAUDE_POWERLINE_VERSION}" && \
     npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}"
 

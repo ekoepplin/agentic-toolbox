@@ -24,7 +24,7 @@ Complete the task. This repo is a Claude Code **plugin** (see `CONTEXT.md`), not
 
 Before committing, run whichever of these apply:
 
-- `scripts/check.sh` — the plugin drift guard: verifies `plugin.json` ↔ shipped skills on disk are in sync. Introduced by issue #5; if it does not exist yet, skip this gate.
+- `scripts/check.sh` — the plugin drift guard: verifies `plugin.json` ↔ shipped skills on disk are in sync.
 - Plugin-load smoke-check: `claude --plugin-dir .` loads the plugin cleanly and any skill you touched resolves as `/agentic-toolbox:<name>`.
 
 Every gate that exists must pass. If a gate fails, fix and re-run. Do not commit on red.

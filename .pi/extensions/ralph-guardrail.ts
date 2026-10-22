@@ -6,9 +6,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", (event) => {
-    // Deliberately over-matching, like settings.ralph.json's prefix-denies:
-    // also catches `git push --force-with-lease`.
-    if (event.toolName === "bash" && /git push (\s--force|-f)/.test(event.input.command ?? "")) {
+    // Any --force / -f (also bundled, e.g. -uf) within one `git push` command.
+    // Deliberately over-matching: also catches `git push --force-with-lease`.
+    if (event.toolName === "bash" && /\bgit\s+push\b[^;&|\n]*\s(--force\b|-[A-Za-z]*f)/.test(event.input.command ?? "")) {
       return { block: true, reason: "force-push is not allowed in this repo" };
     }
   });

@@ -29,14 +29,15 @@ The command:
    (`.devcontainer/scripts/probe-dock.sh` — the same probes the dogfooded
    workbench runs via `make probe-dock`), reusing the deterministic probe
    techniques from the earlier pi E2E:
-   - Claude-adapter skill expansion — the `--plugin-dir` plugin inventory
-     lists the three shipped skills under the toolbox namespace;
+   - Claude adapter — the plugin loads via `--plugin-dir` and its inventory
+     lists every skill in `plugin.json` (the probes read the manifest; none
+     hard-codes skill names or counts);
    - the dock alias is wired for interactive shells;
    - pi model-list probe — `pi --list-models` lists the seeded
      `vllm-hpzgx/qwen` provider (catalog only, no endpoint call);
    - pi deterministic skill expansion — the `get_commands` RPC table lists
-     `skill:web-search-local` (base shipped) and `skill:code-review`
-     (vendored);
+     `skill:<name>` for every shipped skill plus the vendored
+     `skill:code-review`;
    - the base's skill paths are seeded in pi's container config;
    - SSH keys are synced — `authorized_keys` matches the staged host file
      (`~/.ssh/container_authorized_keys`) and is mode 600, so a

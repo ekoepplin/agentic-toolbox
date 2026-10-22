@@ -15,7 +15,7 @@ copilot login     # once per container — prints a device code to enter on gith
 copilot           # interactive session in the host repo
 ```
 
-Skills are invoked as `/<skill-name>` (e.g. `/web-search-local`) or picked by
+Skills are invoked as `/<skill-name>` (e.g. `/code-review`) or picked by
 Copilot on its own when relevant; `/skills list` shows what is loaded.
 
 ## What the adapter wires
@@ -30,8 +30,8 @@ Copilot on its own when relevant; `/skills list` shows what is loaded.
 
 There is no Copilot manifest: the adapter derives its skill list from disk, so
 `scripts/check.sh` (the `plugin.json` contract) does not cover it. The dock
-probe does — `make probe-dock` asserts `copilot skill list` contains the shipped
-skills and a vendored one, without login or an LLM call.
+probe does — `make probe-dock` asserts `copilot skill list` contains every
+skill in `plugin.json` and a vendored one, without login or an LLM call.
 
 ## Login and container lifetime
 

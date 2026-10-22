@@ -4,6 +4,23 @@ Append-only. Most recent at top.
 
 ---
 
+## 2026-10-22 — `make image` without buildx silently uses the legacy builder
+
+### A missing buildx plugin turns a BuildKit Dockerfile into a slow late failure
+On colima with only the compose CLI plugin, `docker build` fell back to the
+legacy builder: it rebuilt every layer uncached for ~2 minutes, then died at the
+first `COPY --chmod` ("requires BuildKit"). **Rule:** `make image` exports
+`DOCKER_BUILDKIT=1` so a missing plugin fails in a second with a clear message;
+fix with `brew install docker-buildx` + link into `~/.docker/cli-plugins/`.
+
+### Hard-coded skill names in probes break on any skill change
+`probe-dock.sh` asserted `Skills (3)` and three literal names, so removing or
+adding a skill broke the runtime gate. **Rule:** probes derive the shipped set
+from `plugin.json` (the contract `check.sh` already enforces) — never a literal
+list or count.
+
+---
+
 ## 2026-09-13 — pi + local vLLM/SGLang model routing
 
 ### pi's model `id` is the wire name — it must equal the server's `data[].id`
