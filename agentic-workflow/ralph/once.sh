@@ -47,4 +47,6 @@ mission=$(ralph_mission "$ISSUE" "$RALPH_DIR/prompt.md")
 settings_flag=()
 [[ -f "$RALPH_DIR/settings.ralph.json" ]] && settings_flag=(--settings "$RALPH_DIR/settings.ralph.json")
 
-claude ${settings_flag[@]+"${settings_flag[@]}"} --permission-mode acceptEdits --model "$MODEL" "$mission"
+# as-bot: commit/push/gh as the bot account when BOT_GIT_USER is set.
+"$RALPH_ROOT/.devcontainer/as-bot.sh" claude ${settings_flag[@]+"${settings_flag[@]}"} \
+  --permission-mode acceptEdits --model "$MODEL" "$mission"

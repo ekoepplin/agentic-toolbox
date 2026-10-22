@@ -65,6 +65,13 @@ probe: image
 		grep -q "\"DISABLE_AUTOUPDATER\": \"1\"" /etc/claude-code/managed-settings.json \
 			|| { echo "FATAL: Claude Code auto-updater not disabled"; exit 1; }; \
 		echo "claude: auto-updater disabled (version pinned)"; \
+		grep -q "\"attribution\": {\"commit\": \"\", \"pr\": \"\"}" /etc/claude-code/managed-settings.json \
+			|| { echo "FATAL: Claude co-author attribution not disabled"; exit 1; }; \
+		[ "$$(cd /tmp && BOT_GIT_USER=probe-bot BOT_GH_TOKEN=t as-bot git var GIT_AUTHOR_IDENT | cut -d" " -f1-2)" = "probe-bot <probe-bot@users.noreply.github.com>" ] \
+			|| { echo "FATAL: as-bot does not set the bot identity"; exit 1; }; \
+		[ "$$(PI_GIT_USER=old-bot as-bot sh -c "echo \$$GIT_COMMITTER_NAME" 2>/dev/null)" = old-bot ] \
+			|| { echo "FATAL: as-bot ignores the PI_GIT_* fallback"; exit 1; }; \
+		echo "claude: no co-author trailer; as-bot sets the bot identity"; \
 		git config --system --get-all safe.directory | grep -qx "\*" \
 			|| { echo "FATAL: git safe.directory not set"; exit 1; }; \
 		echo "-- sshd config: internal port, key-only, single user --"; \

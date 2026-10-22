@@ -97,16 +97,27 @@ Workbenches don't share a network, but every one mounts `~/agent-work` and
 `~/agent-logs` from the Mac — drop a file in `~/agent-work` in one workbench,
 read it in another. What else can and can't reach across: `docs/cross-workbench.md`.
 
-## Optional: a bot identity for pi
+## Optional: a bot identity for the agents
 
-Set these on the host to make pi commit and push as a dedicated GitHub
-account (e.g. a bot); unset, pi uses your normal git identity:
+Set these on the host to make pi **and Claude Code** commit, push and use `gh`
+as a dedicated GitHub account (e.g. a bot) inside workbenches and in the ralph
+loop; unset, they use your normal git identity:
 
 ```bash
-export PI_GIT_USER=my-bot
-export PI_GIT_EMAIL=12345+my-bot@users.noreply.github.com   # optional
-export PI_GH_TOKEN=<the bot's PAT, scopes repo + workflow>
+export BOT_GIT_USER=my-bot
+export BOT_GIT_EMAIL=12345+my-bot@users.noreply.github.com   # optional
+export BOT_GH_TOKEN=<the bot's PAT, scopes repo + workflow>
 ```
+
+The older `PI_GIT_USER` / `PI_GIT_EMAIL` / `PI_GH_TOKEN` names still work.
+The host's `compose.yaml` must pass them through (`environment:` — the
+scaffolder adds the `BOT_*` lines; projects docked earlier need them added by
+hand). The dock step persists them to the container-local
+`~/.config/as-bot.env` (mode 600), because SSH sessions don't inherit the
+container's environment. The wrapper is `.devcontainer/as-bot.sh`, scoped to
+the agent process — your own shell commits stay personal. Workbenches also drop Claude's `Co-Authored-By`
+trailer (managed settings), so GitHub never lists @claude as a contributor.
+Claude Code running directly on the Mac is not covered.
 
 ## Security notes
 

@@ -99,6 +99,11 @@ cmp -s /tmp/container_authorized_keys "$HOME/.ssh/authorized_keys" \
   || { echo "FATAL: authorized_keys is not mode 600 (sshd would reject it)"; exit 1; }
 echo "ssh: authorized_keys synced from the staged host file (mode 600)"
 
+# ── Bot identity: persisted for SSH sessions, never world-readable ─────────
+[ "$(stat -c %a "$HOME/.config/as-bot.env")" = 600 ] \
+  || { echo "FATAL: ~/.config/as-bot.env missing or not mode 600"; exit 1; }
+echo "bot: identity file present for SSH sessions (mode 600)"
+
 # ── Idempotency: a second dock run is a no-op ────────────────────────────────
 pin="$(sed -n 's/^mattpocock-skills[[:space:]]*=[[:space:]]*\([^[:space:]#]*\).*/\1/p' "$BASE/.devcontainer/skills.lock" | head -n1)"
 second="$(bash "$BASE/.devcontainer/scripts/dock.sh")"

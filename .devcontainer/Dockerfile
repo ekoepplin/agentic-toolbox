@@ -84,6 +84,7 @@ RUN case "$(dpkg --print-architecture)" in \
 # node may start sshd (compose command) and fix the docker socket group
 # (dock.sh) via sudo — nothing else.
 COPY --chmod=0755 fix-docker-socket.sh /usr/local/bin/fix-docker-socket.sh
+COPY --chmod=0755 as-bot.sh /usr/local/bin/as-bot
 RUN mkdir -p /run/sshd && \
     sed -i -e 's/^#Port 22$/Port 2222/' \
            -e 's/^#PasswordAuthentication yes$/PasswordAuthentication no/' \
@@ -133,14 +134,16 @@ RUN --mount=type=cache,target=/root/.npm \
 #   mounted from the Mac, so these apply to workbenches only:
 #   status line = claude-powerline; auto-updater off, because Claude Code is
 #   pinned above and the root-owned npm prefix made every session report
-#   "Auto-update failed".
+#   "Auto-update failed"; no Claude co-author trailer on commits/PRs, so
+#   GitHub never lists @claude as a contributor (the bot identity, as-bot,
+#   is the author instead).
 COPY claude-aliases.sh /etc/claude-aliases.sh
 COPY tmux.zsh /etc/tmux.zsh
 RUN ln -s ../g/ghostty /usr/share/terminfo/x/xterm-ghostty && \
     usermod -s /bin/zsh node && \
     git config --system --add safe.directory '*' && \
     mkdir -p /etc/claude-code && \
-    echo '{"statusLine": {"type": "command", "command": "/usr/local/bin/claude-powerline --style=powerline", "padding": 0}, "env": {"DISABLE_AUTOUPDATER": "1"}}' \
+    echo '{"statusLine": {"type": "command", "command": "/usr/local/bin/claude-powerline --style=powerline", "padding": 0}, "env": {"DISABLE_AUTOUPDATER": "1"}, "attribution": {"commit": "", "pr": ""}}' \
         > /etc/claude-code/managed-settings.json && \
     install -d -m 700 -o node -g node /home/node/.ssh
 

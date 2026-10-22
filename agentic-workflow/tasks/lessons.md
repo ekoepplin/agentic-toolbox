@@ -4,6 +4,20 @@ Append-only. Most recent at top.
 
 ---
 
+## 2026-10-22 — bot identity lives in a dotfiles function, not env vars
+
+### Check ~/repos/dotfiles before answering "who does the agent run as"
+I answered "pi pushes as you" after checking only `PI_GIT_*`/`BOT_GIT_*` env
+vars. The owner corrected: `~/repos/dotfiles/zsh/zshrc` defines a `pi()`
+function that hard-codes `datadidact-bot` (token from `pass`), so the Mac's
+interactive pi pushes as the bot — while workbenches and ralph scripts (no zsh
+functions, no exported vars) push as the human. **Rule:** for identity/config
+questions, grep the dotfiles repo (`~/.zshrc`, `~/.gitconfig` are symlinks into
+it) as well as this repo and the env; answer per execution context (Mac shell,
+workbench, script).
+
+---
+
 ## 2026-10-22 — `make image` without buildx silently uses the legacy builder
 
 ### A missing buildx plugin turns a BuildKit Dockerfile into a slow late failure

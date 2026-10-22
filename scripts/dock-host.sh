@@ -181,8 +181,12 @@ services:
       - "0.0.0.0:\${SSH_PORT}:2222"
 
     environment:
-      # Optional bot identity for pi (see the base's claude-aliases.sh);
-      # passed through from the host only when set there.
+      # Optional bot identity for pi + claude (see the base's as-bot.sh;
+      # PI_* is the older name, still honoured); passed through from the
+      # host only when set there.
+      - BOT_GIT_USER
+      - BOT_GIT_EMAIL
+      - BOT_GH_TOKEN
       - PI_GIT_USER
       - PI_GIT_EMAIL
       - PI_GH_TOKEN

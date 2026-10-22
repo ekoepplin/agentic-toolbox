@@ -45,4 +45,5 @@ echo "ralph-pi: backend=$BACKEND model=$MODEL_PATTERN issue=#$ISSUE" >&2
 
 mission=$(ralph_mission "$ISSUE" "$RALPH_DIR/prompt-pi.md")
 
-pi -a -p --model "$MODEL_PATTERN" --name "ralph #$ISSUE" "$mission"
+# as-bot: commit/push/gh as the bot account when BOT_GIT_USER is set.
+"$RALPH_ROOT/.devcontainer/as-bot.sh" pi -a -p --model "$MODEL_PATTERN" --name "ralph #$ISSUE" "$mission"

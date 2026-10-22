@@ -16,6 +16,8 @@
 #      base's skill paths.
 #   5. GitHub Copilot CLI — container-local ~/.copilot/skills/ links to every
 #      shipped and vendored skill.
+#   6. Bot identity — compose's BOT_*/PI_* persisted to ~/.config/as-bot.env
+#      (mode 600) for as-bot, because sshd sessions never see container env.
 #
 # Before step 1 it syncs the staged SSH authorized_keys and seeds claude.json —
 # post-create.sh only runs under VS Code, so a `docker compose up` workbench
@@ -211,6 +213,27 @@ if [ "$changed" -eq 0 ]; then
   echo "copilot: skills in sync ($COPILOT_SKILLS)"
 else
   echo "copilot: $changed skill link(s) updated ($COPILOT_SKILLS)"
+fi
+
+# ── 6. Bot identity for SSH sessions ─────────────────────────────────────────
+# compose passes BOT_*/PI_* into the container's environment, but sshd
+# sessions start fresh (lessons 2026-10-17), so as-bot would never see them
+# there. Persist whatever is set — an empty file when nothing is, so a removed
+# bot doesn't linger. Container-local, mode 600: it holds the bot's token.
+BOT_ENV="$HOME/.config/as-bot.env"
+mkdir -p "$(dirname "$BOT_ENV")"
+(
+  umask 077
+  for v in BOT_GIT_USER BOT_GIT_EMAIL BOT_GH_TOKEN PI_GIT_USER PI_GIT_EMAIL PI_GH_TOKEN; do
+    if [ -n "${!v:-}" ]; then printf '%s=%q\n' "$v" "${!v}"; fi
+  done > "$BOT_ENV.new"
+)
+if cmp -s "$BOT_ENV.new" "$BOT_ENV"; then
+  rm "$BOT_ENV.new"
+  echo "bot: identity in sync ($BOT_ENV)"
+else
+  mv "$BOT_ENV.new" "$BOT_ENV"
+  echo "bot: identity updated ($BOT_ENV)"
 fi
 
 echo "dock: all harnesses wired"

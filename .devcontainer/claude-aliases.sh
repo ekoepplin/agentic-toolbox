@@ -71,34 +71,13 @@ check-vllm() {
   echo "=== All checks passed — run: pi-zgx | pi-flashnext ==="
 }
 
-# Optional bot identity for pi. When PI_GIT_USER is set, pi commits and pushes
-# as that GitHub user (e.g. a dedicated bot account); otherwise pi runs as-is.
-# Scoped to the pi process only, so git commits made from the shell itself keep
-# the personal identity.
-#   PI_GIT_USER   GitHub login of the bot
-#   PI_GIT_EMAIL  commit email (default: <PI_GIT_USER>@users.noreply.github.com)
-#   PI_GH_TOKEN   the bot's PAT (scopes repo + workflow)
-# Without a token pushes fail instead of falling back to another login: the
-# credential helpers are replaced, gh gets its own empty config dir, and no
-# other GitHub token is passed through.
-pi() {
-  if [[ -z ${PI_GIT_USER:-} ]]; then
-    command pi "$@"
-    return
-  fi
-  local user=$PI_GIT_USER
-  local email="${PI_GIT_EMAIL:-$user@users.noreply.github.com}"
-  local token="${PI_GH_TOKEN:-}"
-  [[ -n $token ]] || echo "pi: PI_GH_TOKEN not set; commits stay $user, pushes will fail" >&2
-  GIT_AUTHOR_NAME=$user GIT_AUTHOR_EMAIL=$email \
-  GIT_COMMITTER_NAME=$user GIT_COMMITTER_EMAIL=$email \
-  GH_TOKEN=$token GITHUB_TOKEN=$token GH_CONFIG_DIR=$HOME/.config/gh-$user \
-  GIT_CONFIG_COUNT=2 \
-  GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0= \
-  GIT_CONFIG_KEY_1=credential.https://github.com.helper \
-  GIT_CONFIG_VALUE_1="!f() { test \"\$1\" = get && test -n \"\$GH_TOKEN\" && echo username=$user && echo \"password=\$GH_TOKEN\"; }; f" \
-    command pi "$@"
-}
+# Optional bot identity for the agent CLIs: with BOT_GIT_USER (or the older
+# PI_GIT_USER) set, pi and claude commit, push and call gh as that GitHub
+# account — see /usr/local/bin/as-bot. Unset, they run as-is.
+# `function name` form: the dock step later adds `alias claude=…`, and an
+# alias must not expand inside the definition if this file is re-sourced.
+function pi { as-bot pi "$@"; }
+function claude { as-bot claude "$@"; }
 
 # pi against the HP-ZGX backend (goes through the pi() bot wrapper)
 # pi-zgx: qwen38 or nvfp4 backend; pi-flashnext: Flash-Next backend
