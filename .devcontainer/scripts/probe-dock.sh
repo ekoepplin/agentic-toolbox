@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 # Issue #10 acceptance probes, run inside the dogfooded workbench
 # (make probe-dock → docker compose exec). Every probe is deterministic:
-# no LLM call, no model endpoint needed. Requires the dock step to have run
-# (i.e. the workbench is up — it runs on every start via the compose command).
+# no LLM call, no model endpoint needed. Requires the workbench to be up; waits
+# for the dock step (run on every start via the compose command) to finish.
 set -euo pipefail
 
 BASE="$(cd "$(dirname "$0")/../.." && pwd)"
 echo "== dock probes: workbench (base at $BASE) =="
+
+# Right after `docker compose up` the dock step is still running; probing then
+# fails spuriously. The compose command (sh -c '… dock.sh …; exec sleep
+# infinity') names dock.sh until the step ends, so wait for no match.
+deadline=$(( $(date +%s) + 600 ))
+while pgrep -f 'scripts/dock\.sh' >/dev/null; do
+  [ "$(date +%s)" -lt "$deadline" ] \
+    || { echo "FATAL: dock step still running after 600s"; exit 1; }
+  [ -n "${waited:-}" ] || { echo "waiting for the dock step to finish…"; waited=1; }
+  sleep 2
+done
 
 # Shipped skills come from the Claude Code adapter's manifest — the contract
 # scripts/check.sh enforces — so no probe hard-codes skill names or counts.
