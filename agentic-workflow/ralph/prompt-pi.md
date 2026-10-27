@@ -14,11 +14,11 @@ Then exit. Do not invent work.
 
 # EXPLORATION
 
-Explore the repo. Read `docs/adr/` for architectural decisions and `CONTEXT.md` for domain vocabulary. If a per-issue draft exists at `tasks/drafts/issue-*.md` matching this issue number, read it.
+Explore the repo. Read `docs/adr/` for architectural decisions and `GLOSSARY.md` for domain vocabulary. If a per-issue draft exists at `tasks/drafts/issue-*.md` matching this issue number, read it.
 
 # IMPLEMENTATION
 
-Complete the task. This repo is a Claude Code **plugin** (see `CONTEXT.md`), not a Python pipeline — there is no unit-test framework. The behavioural check is the plugin drift guard (see FEEDBACK LOOPS). Touch only files within the issue scope. Do not refactor adjacent code, do not bundle other issues' work, do not "improve" things that aren't broken.
+Complete the task. This repo is a Claude Code **plugin** (see `GLOSSARY.md`), not a Python pipeline — there is no unit-test framework. The behavioural check is the plugin drift guard (see FEEDBACK LOOPS). Touch only files within the issue scope. Do not refactor adjacent code, do not bundle other issues' work, do not "improve" things that aren't broken.
 
 # FEEDBACK LOOPS
 

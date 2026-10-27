@@ -8,7 +8,7 @@ The intended pipeline is **think → plan → break down → execute (loop) → 
 
 ## 1. Think — `/grill-with-docs`
 
-Stress-test the idea against `CONTEXT.md` + `docs/adr/`. Updates terminology and ADRs inline as decisions crystallise. Output: shared understanding, no code yet.
+Stress-test the idea against `GLOSSARY.md` + `docs/adr/`. Updates terminology and ADRs inline as decisions crystallise. Output: shared understanding, no code yet.
 
 ## 2. Spec — `/to-spec`
 
