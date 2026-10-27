@@ -131,10 +131,29 @@ for the hard one).
 agentic-workflow/ralph/pi-afk.sh <issue> [max-iters] --model qwen3.8-flash-next-a5b
 ```
 
-1. **Refined issues only.** The issue body must carry an `## Execution plan`
-   section and a `## Verify` section whose first fenced block lists one shell
-   command per line. Without both, `pi-once.sh` and `pi-afk.sh` exit 2 before
-   pi starts.
+1. **Stamped plans only.** The issue body must carry this shape (the format
+   is defined once, in `lib.sh`; refine (#31) writes it):
+
+   ````markdown
+   ## Execution plan
+   steps, out of scope …
+   ```files
+   Makefile
+   docs/new-page.md (new)
+   ```
+   ## Verify
+   ```
+   make check
+   ```
+   <!-- ralph:plan base=<sha> hash=<sha256> -->
+   ````
+
+   `agentic-workflow/ralph/plan-stamp.sh <N>` writes the marker: `base` is
+   `origin/master` at stamping, `hash` covers the two sections (blank lines,
+   trailing whitespace and the marker itself excluded, so edits elsewhere in
+   the body don't count). `pi-once.sh` and `pi-afk.sh` exit 2 before pi starts
+   when a section or the files block is missing, the plan is unstamped, or it
+   changed since stamping.
    They also exit 2 unless `as-bot` resolves to a bot whose token logs in as
    that same account (`ralph_require_bot`): qwen never runs with your own
    credentials, which on the Mac are the admin's and may bypass the ruleset.
@@ -146,11 +165,19 @@ agentic-workflow/ralph/pi-afk.sh <issue> [max-iters] --model qwen3.8-flash-next-
 3. **qwen only commits.** The prompt forbids push, PR and merge; the
    guardrail extension blocks force-push, `git push … master`, `gh pr merge`
    and the merge API (defence in depth — the `master` ruleset is the control).
-4. **The harness verifies.** After every iteration `lib.sh`'s `ralph_verify`
-   runs each Verify command in a clean, detached worktree at the branch head,
-   so only committed work counts. Red: the output goes into the next
-   iteration's mission (`# PREVIOUS ITERATION`). Use only gates that work in a
-   workbench (see `docs/harnesses/dock-e2e.md`).
+4. **The harness verifies.** `pi-afk.sh` snapshots the stamped plan at start
+   and stops (exit 2) if the live plan's hash differs after any iteration —
+   also when someone re-stamped it. After every iteration `ralph_verify` runs
+   each Verify command from the snapshot in a clean, detached worktree at the
+   branch head, so only committed work counts, and `ralph_scope_gate` fails
+   unless every file changed since the merge-base with `origin/master`
+   (deletions and renames included) is in the files block — which also stops
+   qwen from editing a script a Verify command calls. Red: the output goes
+   into the next iteration's mission (`# PREVIOUS ITERATION`). Use only gates
+   that work in a workbench (see `docs/harnesses/dock-e2e.md`).
+   Known limit: the bot token can edit and re-stamp an issue *between* runs;
+   only changes during a run are detected. Refine and review running as a
+   separate identity (#41) is the planned fix.
 5. **Green → PR, never a merge.** The loop pushes the branch and opens a PR as
    the bot (`as-bot`), with the Verify log in the body. The ruleset requires an
    approval from someone other than the pusher.
