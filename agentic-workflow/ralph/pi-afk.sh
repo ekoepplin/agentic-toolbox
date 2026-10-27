@@ -6,7 +6,8 @@
 # loop push the branch and open a PR as the bot. It never merges: the master
 # ruleset requires an approval from someone other than the pusher.
 #
-# Exit: 0 green + PR open · 1 max iterations · 2 refused (no plan, bad args)
+# Exit: 0 green + PR open · 1 max iterations (default 3): labelled needs-opus,
+#       last Verify output commented · 2 refused (no plan, stale plan, bad args)
 #       3 green without any commit (the plan's checks don't fail on base)
 #
 # See lib.sh and docs/harnesses/pi-agent-harness/ralph-on-pi.md.
@@ -21,7 +22,7 @@ usage() {
 ISSUE="${1:-}"
 [[ -n "$ISSUE" ]] || usage
 shift
-MAX=10
+MAX=3
 if [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]]; then
   MAX="$1"
   shift
@@ -35,8 +36,12 @@ case "$BACKEND" in
 esac
 
 ralph_target
-ralph_require_plan "$ISSUE"
 ralph_require_bot
+AS_BOT="$RALPH_ROOT/.devcontainer/as-bot.sh"
+# Through as-bot: inside a workbench plain git has no GitHub credentials.
+# Fetch before the plan check, so its staleness check sees the current tip.
+"$AS_BOT" git -C "$PROJECT_ROOT" fetch -q origin "$DEFAULT_BRANCH"
+ralph_require_plan "$ISSUE"
 
 BRANCH="ralph/issue-$ISSUE"
 # Per repo: issue numbers repeat across repos.
@@ -47,10 +52,7 @@ mkdir -p "$STATE"
 # run stops if the live plan changes underneath it (even when re-stamped).
 PLAN_HASH="$(ralph_plan_hash "$PLAN_BODY")"
 printf '%s\n' "$PLAN_BODY" > "$STATE/plan.md"
-AS_BOT="$RALPH_ROOT/.devcontainer/as-bot.sh"
 
-# Through as-bot: inside a workbench plain git has no GitHub credentials.
-"$AS_BOT" git -C "$PROJECT_ROOT" fetch -q origin "$DEFAULT_BRANCH"
 if [[ ! -d "$WT" ]]; then
   if git -C "$PROJECT_ROOT" rev-parse -q --verify "refs/heads/$BRANCH" >/dev/null; then
     git -C "$PROJECT_ROOT" worktree add -q "$WT" "$BRANCH"
@@ -104,5 +106,9 @@ for ((i = 1; i <= MAX; i++)); do
   } > "$STATE/feedback.md"
 done
 
-echo "ralph-pi: hit MAX=$MAX iters on #$ISSUE with Verify or scope red — see $STATE/verify.log" >&2
+echo "ralph-pi: hit MAX=$MAX iters on #$ISSUE with Verify or scope red — labelling needs-opus; see $STATE/verify.log" >&2
+body="$(printf 'ralph-pi: Verify or scope gate still red after %s iterations on `%s` (%s) — escalating to Opus (`once.sh %s --backend anthropic --model opus`).\n\nLast Verify output:\n\n```\n%s\n```\n' \
+  "$MAX" "$BRANCH" "$(git -C "$PROJECT_ROOT" rev-parse --short "$BRANCH")" "$ISSUE" "$(tail -c 6000 "$STATE/verify.log")")"
+ralph_gh issue comment "$ISSUE" --repo "$REPO" --body "$body" >/dev/null
+ralph_gh issue edit "$ISSUE" --repo "$REPO" --add-label needs-opus >/dev/null
 exit 1
