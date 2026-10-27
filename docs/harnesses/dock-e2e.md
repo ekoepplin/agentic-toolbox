@@ -61,3 +61,49 @@ exits non-zero on any probe failure, so it is a gate.
   (`dock-host.sh`), the base image, or `skills.lock` — none of which the
   static guard can see.
 - On a fresh machine / fresh clone, before running ralph unattended.
+
+## Running the gates inside a workbench
+
+Checked 2026-10-27 (#26) in the base's own workbench on colima (Docker
+server 27.4.0), with the Docker CLI talking to the Mac's daemon through the
+mounted socket. **Run `make image`, `make probe` and `make dock-e2e` on the
+Mac.** Inside a workbench only the subset below works:
+
+| Gate | Inside a workbench | Why |
+|---|---|---|
+| `make check` | ✅ | static, no Docker |
+| `make probe` | ❌ | it depends on `make image`, which fails at once: the image has no buildx plugin and the Makefile forces BuildKit |
+| `make -o image probe` | ✅ | probes the **existing** image without rebuilding — proves nothing about a Dockerfile change |
+| `make probe-dock` | ❌ | `docker compose` is not installed (only `docker-ce-cli`) |
+| `bash .devcontainer/scripts/probe-dock.sh` | ✅ | the same probes, run in the current workbench (run `.devcontainer/scripts/dock.sh` first so they see the change) |
+| `make dock-e2e` | ❌ | needs `docker compose`; behind that, two more blockers (below) |
+
+Don't run `make image` inside a workbench even once buildx exists: it passes
+the container's `$HOME` (`/home/node`) as `HOST_HOME`, so the rebuilt shared
+image would lose the Mac-path `~/.claude/hooks` mirror for every workbench.
+
+**Bind mounts resolve on the Mac, not in the container.** The daemon reads a
+mount source as a path on the Mac (through colima's home share), so from
+inside a workbench:
+
+| Mount source | Result |
+|---|---|
+| the mirrored base path (ADR-0004) | ✅ the real files |
+| a Mac path such as `/Users/<user>/.claude` | ✅ the real files |
+| the container's `/tmp/...` | ❌ an empty directory |
+| the container's `$HOME/...` (`/home/node/...`) | ❌ an empty directory |
+
+So `dock-e2e.sh` would still break with compose installed: its scratch host
+lives under the container's `/tmp`, and the generated `compose.yaml`
+interpolates `${HOME}` for `~/.claude`, `~/.claude.json` and the staged
+`authorized_keys`, which become empty mounts (not run: Docker creates a missing
+`-v` source as a directory, so the staged keys file would arrive as an empty
+directory and the SSH-key probe would fail).
+
+**Consequence for the ralph loop:** qwen's verify commands may use only the
+✅ rows. Tickets that change the image, the scaffolder or the E2E itself need
+their runtime gate run on the Mac, so refine routes them to the owner instead
+of qwen. Making the full set work in a workbench would take: the
+`docker-compose-plugin` (and `docker-buildx-plugin`) in the image, a scratch
+dir under a mirrored path, and the Mac home passed explicitly instead of
+`${HOME}` / `$(HOME)`.
