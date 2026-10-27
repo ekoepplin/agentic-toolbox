@@ -167,8 +167,12 @@ def seed_settings(d):
     if not isinstance(skills, list):
         skills = []
     # Point pi at the base's skill paths (shipped skills + vendored set),
-    # regardless of the session's working directory.
-    for p in (os.path.join(base_dir, "skills"), os.path.join(base_dir, ".agents", "skills")):
+    # regardless of the session's working directory. The vendored set comes
+    # through the flat links install-skills.sh curates in .claude/skills/
+    # (pi follows them), not the raw .agents/skills/ clone: pi scans that
+    # recursively, so upstream drafts would leak in. Drop that older entry.
+    skills = [p for p in skills if p != os.path.join(base_dir, ".agents", "skills")]
+    for p in (os.path.join(base_dir, "skills"), os.path.join(base_dir, ".claude", "skills")):
         if p not in skills:
             skills.append(p)
     d["skills"] = skills

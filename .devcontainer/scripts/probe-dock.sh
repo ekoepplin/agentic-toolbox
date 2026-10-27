@@ -84,13 +84,24 @@ for s in ${shipped[@]+"${shipped[@]}"} code-review; do
 done
 echo "pi: deterministic skill expansion passed (${#shipped[@]} shipped + vendored code-review)"
 
+# Upstream drafts and deprecated skills never reach pi — neither through the
+# seeded paths nor the project's auto-discovered .agents/skills/. The names
+# come from disk, so the probe follows whatever upstream ships.
+for d in "$BASE"/.agents/skills/*/skills/in-progress/*/ "$BASE"/.agents/skills/*/skills/deprecated/*/; do
+  [ -f "$d/SKILL.md" ] || continue
+  ! echo "$cmds" | grep -qx "skill:$(basename "$d")" \
+    || { echo "FATAL: pi exposes upstream draft/deprecated skill:$(basename "$d")"; exit 1; }
+done
+echo "pi: no upstream draft or deprecated skill exposed"
+
 # ── pi: the base's skill paths are seeded in the container config ───────────
 python3 - "$HOME/.pi/agent/settings.json" "$BASE" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
 skills = data.get("skills", [])
 assert sys.argv[2] + "/skills" in skills, "base skills/ path not seeded"
-assert sys.argv[2] + "/.agents/skills" in skills, "vendored path not seeded"
+assert sys.argv[2] + "/.claude/skills" in skills, "vendored path not seeded"
+assert sys.argv[2] + "/.agents/skills" not in skills, "raw vendored clone still seeded"
 print("pi: base skill paths seeded in settings.json")
 PY
 

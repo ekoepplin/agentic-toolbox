@@ -72,9 +72,19 @@ unknown colon-suffix fails instead of guessing a different model).
 The vendored mattpocock-skills under `.agents/skills/` are **auto-discovered**
 by pi from the project root (after project trust — the `-a` in the launch line
 handles that). The base's own `skills/` directory is not a default pi
-discovery location; the committed `.pi/settings.json` (`{"skills": ["./skills"]}`)
-and the dock step's seeded `skills[]` both point pi at it, so any skill shipped
-there later is picked up with no extra flag.
+discovery location; the committed `.pi/settings.json` and the dock step's
+seeded `skills[]` both point pi at it, so any skill shipped there later is
+picked up with no extra flag.
+
+Drafts never reach pi. pi scans skill directories recursively, so the
+committed `.pi/settings.json` excludes `!**/in-progress/**` and
+`!**/deprecated/**` — this filters the auto-discovered `.agents/skills/` (and
+the base's own `skills/in-progress/`). The patterns only work there: pi matches
+them relative to `.agents/`, and minimatch's `**` does not cross dot-directories,
+so the same pattern in the user-level `settings.json` matches nothing. The dock
+step therefore seeds the container with the flat links `install-skills.sh`
+curates in `.claude/skills/` (pi follows them) instead of the raw clone.
+`make probe-dock` asserts no upstream draft is exposed.
 
 ### 3. (Optional) Guardrail extension
 
