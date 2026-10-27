@@ -25,6 +25,7 @@ EOF2
 
 ralph_parse_once "$@"
 ralph_require_plan "$ISSUE"
+ralph_require_bot
 
 # Map backend -> pi model pattern (provider/id)
 case "$BACKEND" in

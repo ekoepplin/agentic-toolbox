@@ -135,6 +135,10 @@ agentic-workflow/ralph/pi-afk.sh <issue> [max-iters] --model qwen3.8-flash-next-
    section and a `## Verify` section whose first fenced block lists one shell
    command per line. Without both, `pi-once.sh` and `pi-afk.sh` exit 2 before
    pi starts.
+   They also exit 2 unless `as-bot` resolves to a bot whose token logs in as
+   that same account (`ralph_require_bot`): qwen never runs with your own
+   credentials, which on the Mac are the admin's and may bypass the ruleset.
+   So run the loop **inside a workbench** docked with `BOT_*` set.
 2. **Own worktree.** qwen works in `~/.cache/ralph/issue-<N>` on branch
    `ralph/issue-<N>`, cut from `origin/master` — the base's shared working
    tree and branch are never switched. Override the location with
