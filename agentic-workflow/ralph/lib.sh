@@ -9,8 +9,9 @@
 # Stays bash 3.2-compatible, so the loop also runs on a bare Mac.
 
 RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The base repo: it supplies these scripts, as-bot and .env.ralph. The repo the
+# loop works on is the target (ralph_target) — a host project or the base.
 RALPH_ROOT="$(cd "$RALPH_DIR/../.." && pwd)"
-REPO="ekoepplin/agentic-toolbox"
 
 # An AFK loop must never wait on a credential prompt: missing credentials fail.
 export GIT_TERMINAL_PROMPT=0
@@ -18,6 +19,26 @@ export GIT_TERMINAL_PROMPT=0
 # ralph_gh <args...> — gh with the bot's credentials when BOT_GIT_USER is set
 # (inside a workbench plain gh is not logged in); plain gh otherwise.
 ralph_gh() { "$RALPH_ROOT/.devcontainer/as-bot.sh" gh "$@"; }
+
+# ralph_target — the git repo of the current directory is the target: sets
+# PROJECT_ROOT (its top level), REPO (owner/name of its GitHub origin) and
+# DEFAULT_BRANCH (from GitHub). Exits 2 outside a git repo or without a
+# GitHub origin.
+ralph_target() {
+  local url r
+  PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" \
+    || { echo "ralph: $PWD is not inside a git repo — run from the target repo's root" >&2; exit 2; }
+  url="$(git -C "$PROJECT_ROOT" remote get-url origin 2>/dev/null)" \
+    || { echo "ralph: $PROJECT_ROOT has no origin remote" >&2; exit 2; }
+  r="${url#https://github.com/}"; r="${r#git@github.com:}"; r="${r#ssh://git@github.com/}"; r="${r%.git}"; r="${r%/}"
+  if [[ "$r" == "$url" || "$r" != */* || "$r" == */*/* ]]; then
+    echo "ralph: origin '$url' is not a GitHub repo" >&2; exit 2
+  fi
+  REPO="$r"
+  DEFAULT_BRANCH="$(ralph_gh repo view "$REPO" --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null)" \
+    && [[ -n "$DEFAULT_BRANCH" ]] \
+    || { echo "ralph: cannot read $REPO on GitHub (no access with these credentials?)" >&2; exit 2; }
+}
 
 # .env.ralph at the repo root sets RALPH_BACKEND / RALPH_MODEL defaults.
 if [[ -f "$RALPH_ROOT/.env.ralph" ]]; then
@@ -175,6 +196,10 @@ ralph_require_bot() {
     echo "ralph: bot token logs in as '${login:-nothing}', not '$user' — refusing to run qwen." >&2
     exit 2
   fi
+  if [[ "$(ralph_gh api "repos/$REPO" --jq .permissions.push 2>/dev/null)" != true ]]; then
+    echo "ralph: $user has no write access to $REPO — onboard the repo first (ralph-onboard.sh)." >&2
+    exit 2
+  fi
 }
 
 # ralph_verify <body> <ref> <log> — runs the plan's Verify commands in a
@@ -185,7 +210,7 @@ ralph_verify() {
   local cmds wt cmd rc=0
   cmds="$(ralph_verify_cmds "$1")"
   wt="$(mktemp -d "${TMPDIR:-/tmp}/ralph-verify.XXXXXX")"
-  git -C "$RALPH_ROOT" worktree add -q --detach "$wt" "$2" || { rm -rf "$wt"; return 2; }
+  git -C "$PROJECT_ROOT" worktree add -q --detach "$wt" "$2" || { rm -rf "$wt"; return 2; }
   : > "$3"
   while IFS= read -r cmd; do
     printf '$ %s\n' "$cmd" >> "$3"
@@ -198,20 +223,20 @@ ralph_verify() {
   done <<EOF
 $cmds
 EOF
-  git -C "$RALPH_ROOT" worktree remove --force "$wt"
+  git -C "$PROJECT_ROOT" worktree remove --force "$wt"
   return "$rc"
 }
 
 # ralph_scope_gate <body> <ref> <log> — fails unless every file the branch
-# changed since its merge-base with origin/master is in the plan's files
+# changed since its merge-base with origin/<default branch> is in the plan's files
 # block. That includes the scripts a Verify command calls: editing one the
 # plan does not list fails here. Appends its verdict to <log>.
 ralph_scope_gate() {
   local planned changed extra
   planned="$(ralph_plan_files "$1")"
-  changed="$(git -C "$RALPH_ROOT" diff --name-only --no-renames "origin/master...$2")"
+  changed="$(git -C "$PROJECT_ROOT" diff --name-only --no-renames "origin/$DEFAULT_BRANCH...$2")"
   extra="$(printf '%s\n' "$changed" | grep -vxF -e "" -f <(printf '%s\n' "$planned") || true)"
-  printf '$ scope gate: files changed vs origin/master must all be in the plan\n' >> "$3"
+  printf '$ scope gate: files changed vs origin/%s must all be in the plan\n' "$DEFAULT_BRANCH" >> "$3"
   if [[ -z "$extra" ]]; then
     printf '[ok]\n' >> "$3"
     return 0

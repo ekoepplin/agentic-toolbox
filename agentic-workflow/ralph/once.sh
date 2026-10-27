@@ -19,6 +19,7 @@ EOF2
 }
 
 ralph_parse_once "$@"
+ralph_target
 
 case "$BACKEND" in
   anthropic)

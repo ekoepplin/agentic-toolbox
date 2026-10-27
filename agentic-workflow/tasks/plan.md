@@ -192,8 +192,10 @@ expect the first improvements to come from lessons and checks, not prompt tuning
    real separation" note; see the validation table above).
 3. **Ticket size:** refine splits oversized tickets (over the plan size limit)
    into child tickets; `to-tickets` keeps its upstream sizing.
-4. **Scope:** this repo only (`REPO` stays hard-coded in `lib.sh`);
-   host-project support is a later plan.
+4. **Scope:** base first, then host projects in the same pattern (revised
+   2026-10-27). The loop targets the repo it runs in; the base supplies only
+   the scripts. Hosts are onboarded per repo (ruleset, labels, bot access,
+   `BOT_*` in compose). Tickets H1–H6 under #25.
 5. **Gates inside a workbench (#26): document only.** qwen's verify commands
    use only the gates that work in a workbench (`make check`,
    `bash .devcontainer/scripts/probe-dock.sh`, `make -o image probe`, plain

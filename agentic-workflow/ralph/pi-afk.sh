@@ -34,11 +34,13 @@ case "$BACKEND" in
   *) echo "error: --backend must be one of: anthropic, vllm, ollama (got '$BACKEND')" >&2; usage ;;
 esac
 
+ralph_target
 ralph_require_plan "$ISSUE"
 ralph_require_bot
 
 BRANCH="ralph/issue-$ISSUE"
-WT="${RALPH_WORKTREES:-$HOME/.cache/ralph}/issue-$ISSUE"
+# Per repo: issue numbers repeat across repos.
+WT="${RALPH_WORKTREES:-$HOME/.cache/ralph}/${REPO/\//-}/issue-$ISSUE"
 STATE="$WT.state"
 mkdir -p "$STATE"
 # Snapshot of the stamped plan: Verify and the scope gate run from it, and the
@@ -48,15 +50,15 @@ printf '%s\n' "$PLAN_BODY" > "$STATE/plan.md"
 AS_BOT="$RALPH_ROOT/.devcontainer/as-bot.sh"
 
 # Through as-bot: inside a workbench plain git has no GitHub credentials.
-"$AS_BOT" git -C "$RALPH_ROOT" fetch -q origin master
+"$AS_BOT" git -C "$PROJECT_ROOT" fetch -q origin "$DEFAULT_BRANCH"
 if [[ ! -d "$WT" ]]; then
-  if git -C "$RALPH_ROOT" rev-parse -q --verify "refs/heads/$BRANCH" >/dev/null; then
-    git -C "$RALPH_ROOT" worktree add -q "$WT" "$BRANCH"
+  if git -C "$PROJECT_ROOT" rev-parse -q --verify "refs/heads/$BRANCH" >/dev/null; then
+    git -C "$PROJECT_ROOT" worktree add -q "$WT" "$BRANCH"
   else
-    git -C "$RALPH_ROOT" worktree add -q -b "$BRANCH" "$WT" origin/master
+    git -C "$PROJECT_ROOT" worktree add -q -b "$BRANCH" "$WT" "origin/$DEFAULT_BRANCH"
   fi
 fi
-echo "ralph-pi: issue #$ISSUE on $BRANCH in $WT (max $MAX iters)" >&2
+echo "ralph-pi: $REPO#$ISSUE on $BRANCH (from origin/$DEFAULT_BRANCH) in $WT (max $MAX iters)" >&2
 
 rm -f "$STATE/feedback.md"
 for ((i = 1; i <= MAX; i++)); do
@@ -76,7 +78,7 @@ for ((i = 1; i <= MAX; i++)); do
   ralph_scope_gate "$PLAN_BODY" "$BRANCH" "$STATE/verify.log" || green=0
   if [[ $green -eq 1 ]]; then
     echo "ralph-pi: Verify + scope gate green after iter $i" >&2
-    if [[ "$(git -C "$RALPH_ROOT" rev-list --count "origin/master..$BRANCH")" -eq 0 ]]; then
+    if [[ "$(git -C "$PROJECT_ROOT" rev-list --count "origin/$DEFAULT_BRANCH..$BRANCH")" -eq 0 ]]; then
       echo "ralph-pi: green without any commit — the plan's Verify does not fail on base; re-refine #$ISSUE" >&2
       exit 3
     fi
@@ -85,8 +87,8 @@ for ((i = 1; i <= MAX; i++)); do
     if [[ -z "$pr" ]]; then
       title="$(ralph_gh issue view "$ISSUE" --repo "$REPO" --json title --jq .title)"
       body="$(printf 'Closes #%s\n\nImplemented by the pi loop (qwen). Verify run by the harness on %s:\n\n```\n%s\n```\n' \
-        "$ISSUE" "$(git -C "$RALPH_ROOT" rev-parse --short "$BRANCH")" "$(tail -c 6000 "$STATE/verify.log")")"
-      pr="$(ralph_gh pr create --repo "$REPO" --base master --head "$BRANCH" --title "$title" --body "$body")"
+        "$ISSUE" "$(git -C "$PROJECT_ROOT" rev-parse --short "$BRANCH")" "$(tail -c 6000 "$STATE/verify.log")")"
+      pr="$(ralph_gh pr create --repo "$REPO" --base "$DEFAULT_BRANCH" --head "$BRANCH" --title "$title" --body "$body")"
     fi
     echo "ralph-pi: PR $pr — awaiting review (the loop never merges)" >&2
     echo "$pr"
@@ -96,7 +98,7 @@ for ((i = 1; i <= MAX; i++)); do
   echo "ralph-pi: Verify or scope gate red after iter $i" >&2
   {
     printf 'The loop ran the Verify commands and the scope gate on your last commit (%s); they failed.\n' \
-      "$(git -C "$RALPH_ROOT" rev-parse --short "$BRANCH")"
+      "$(git -C "$PROJECT_ROOT" rev-parse --short "$BRANCH")"
     printf 'Fix the cause, commit again, touch only the planned files, and do not change the Verify commands.\n\n```\n%s\n```\n' \
       "$(tail -c 6000 "$STATE/verify.log")"
   } > "$STATE/feedback.md"
