@@ -1,34 +1,42 @@
-# Task: remove the `-local` skills, refactor, speed up, refresh docs (2026-10-22)
+# Task: split ralph loop — Opus plans and reviews, pi/qwen executes (#25)
 
-Owner request: remove all local skills; refactor; make it faster; apply best
-practice; update docs; validate carefully.
+Design and decisions: `agentic-workflow/tasks/plan.md`. GitHub issues are the
+source of truth; this list mirrors them (state as of 2026-10-27). Tag = the
+issue's triage label (`docs/agents/triage-labels.md`).
 
-## Steps
+## Ready now (no open blockers)
 
-1. [x] Remove `skills/{web-search,fetch-news,fetch-free-images}-local` and every
-   reference (plugin.json, Dockerfile, devcontainer.json API keys, Makefile
-   probe, probes, docs, CONTEXT.md glossary)
-   → verify: `grep -rn -- '-local\b'` finds only unrelated hits (`ollama-local`,
-   `connecting-local-models`, `start-local-setup`)
-2. [x] Faster image: drop the skill-only venv deps (newsapi-python, loguru, duckdb,
-   tavily-python, requests) and the unused `ccstatusline` (status line is
-   claude-powerline via managed settings)
-   → verify: `make probe` green
-3. [x] Probes derive the shipped-skill list from `plugin.json` instead of
-   hard-coding names/counts; the pi `get_commands` probe stops at the response
-   instead of a fixed `sleep 8`
-   → verify: `make probe-dock` / `make dock-e2e` green
-4. [x] `scripts/check.sh` portable to macOS bash 3.2 (no `mapfile`), fails on an
-   unparsable `plugin.json`; `make check` target
-   → verify: green on the tree under `/bin/bash` 3.2 and bash 5; each drift case
-   exits 1 in a scratch copy
-5. [x] Ralph: one shared `lib.sh` for env/arg parsing/issue context/AFK loop
-   (removes four-way duplication); fix the force-push guardrail regex
-   (`git push --force` was not blocked); delete the finished one-off `chain.sh`
-   (#8–#14 all closed)
-   → verify: `bash -n`; usage/arg errors; regex table test
-6. [x] Docs: README, CLAUDE.md, CONTEXT.md, MATT-WORKFLOW.md, ralph-on-pi.md,
-   copilot.md, dock-e2e.md, configuration.md, prompts — drop removed skills and
-   stale claims (git-ignored `agentic-workflow/`, `.env.ralph.example`,
-   `setup-pi.sh`, "once check.sh exists", inlined script copies)
-   → verify: stale-term greps clean; links resolve
+1. [ ] #31 `ready-for-agent` — Opus refine writes a stamped plan that passes the plan gates
+   → verify: a real ticket gets plan + files + Verify + marker; criterion without red-on-base check rejected; oversized plan split; Mac-only gates routed to ready-for-human
+2. [ ] #35 `ready-for-agent` — escalate stuck tickets (needs-opus after 3 red) and refuse stale plans
+   → verify: forced-red scratch issue ends labelled needs-opus; editing a planned file after stamping makes the loop refuse
+3. [ ] #52 `ready-for-agent` — guardrail for every pi session in every workbench
+   → verify: host workbench pi blocks push to default branch + gh pr merge; base loads it once; probe-dock asserts it
+4. [ ] #53 `ready-for-agent` — generic pi prompt for host projects
+   → verify: prompt-pi.md names no repo or base-only facts; base run keeps the same contract
+5. [ ] #54 `ready-for-agent` — `ralph-onboard.sh <host>`: ruleset, labels, bot access, BOT_* in compose
+   → verify: second run changes nothing; bot push/self-merge refused on the host afterwards
+6. [ ] #41 `ready-for-human` — reviewer bot account (needed from #32 on)
+   → verify: second account with write + PAT in pass; can approve and merge a datadidact-bot PR
+7. [ ] #55 `ready-for-human` — bot identity survives workbench recreates
+   → verify: recreating any workbench keeps as-bot = datadidact-bot; token in no repo file
+
+## Blocked
+
+8. [ ] #32 `ready-for-agent` — Opus review: hard gates + bounded redo loop · blocked by #41
+9. [ ] #33 `ready-for-agent` — Opus review: evidence-backed rubric score · blocked by #32
+10. [ ] #34 `ready-for-agent` — golden set of known-bad PRs + replay runner · blocked by #33
+11. [ ] #37 `ready-for-agent` — metrics collector + autonomy ladder state · blocked by #33
+12. [ ] #36 `ready-for-human` — L0 shadow run: five real tickets, owner merges · blocked by #31 #33 #34
+13. [ ] #38 `ready-for-agent` — meta loop: retro → one improvement → keep or revert · blocked by #34 #36 #37
+14. [ ] #56 `ready-for-human` — first host run: CONTEXT.md → GLOSSARY.md in sprungjob via the loop · blocked by #52 #53 #54 #55
+
+## Done
+
+- [x] #26 `ready-for-human` — which gates run inside a workbench (document-only)
+- [x] #27 `ready-for-human` — master ruleset + datadidact-bot executor identity
+- [x] #28 `ready-for-agent` — no upstream draft skills in Claude Code / Copilot
+- [x] #39 `ready-for-agent` — no upstream draft skills in pi
+- [x] #29 `ready-for-agent` — qwen ticket ends in a PR gated by harness-run Verify (experiment #42 → PR #48, 10/10)
+- [x] #30 `ready-for-agent` — stamped plans, snapshot, scope gate
+- [x] #51 `ready-for-agent` — loop targets the repo it runs in (host e2e on haus-daten-am-rankrain)
