@@ -13,17 +13,26 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-ISSUE="${1:-}"
-if [[ -z "$ISSUE" ]]; then
+usage() {
   echo "Usage: $0 <issue-number> [max-iters] [--backend NAME] [--model NAME]" >&2
   exit 2
-fi
+}
+
+ISSUE="${1:-}"
+[[ -n "$ISSUE" ]] || usage
 shift
 MAX=10
 if [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]]; then
   MAX="$1"
   shift
 fi
+# Validate the flags forwarded to pi-once.sh once, before any iteration: a
+# bad flag must stop the loop, not burn every iteration on a usage error.
+ralph_parse_once "$ISSUE" "$@"
+case "$BACKEND" in
+  anthropic | vllm | ollama) ;;
+  *) echo "error: --backend must be one of: anthropic, vllm, ollama (got '$BACKEND')" >&2; usage ;;
+esac
 
 ralph_require_plan "$ISSUE"
 ralph_require_bot
@@ -48,8 +57,11 @@ echo "ralph-pi: issue #$ISSUE on $BRANCH in $WT (max $MAX iters)" >&2
 rm -f "$STATE/feedback.md"
 for ((i = 1; i <= MAX; i++)); do
   echo "=== iter $i/$MAX on #$ISSUE ===" >&2
-  (cd "$WT" && RALPH_FEEDBACK="$STATE/feedback.md" "$RALPH_DIR/pi-once.sh" "$ISSUE" "$@") \
-    || echo "ralph-pi: pi exited non-zero; verifying anyway" >&2
+  rc=0
+  (cd "$WT" && RALPH_FEEDBACK="$STATE/feedback.md" "$RALPH_DIR/pi-once.sh" "$ISSUE" "$@") || rc=$?
+  # 2 = pi-once refused (plan, bot identity): nothing ran, so stop here.
+  [[ $rc -ne 2 ]] || exit 2
+  [[ $rc -eq 0 ]] || echo "ralph-pi: pi exited $rc; verifying anyway" >&2
 
   if ralph_verify "$ISSUE" "$BRANCH" "$STATE/verify.log"; then
     echo "ralph-pi: Verify green after iter $i" >&2

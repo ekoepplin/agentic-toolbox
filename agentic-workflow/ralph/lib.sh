@@ -38,8 +38,10 @@ ralph_parse_once() {
   MODEL="${RALPH_MODEL:-}"
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --backend) BACKEND="${2:?--backend needs a value}"; shift 2 ;;
-      --model)   MODEL="${2:?--model needs a value}";     shift 2 ;;
+      --backend | --model)
+        [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || { echo "error: $1 needs a value" >&2; usage; }
+        if [[ "$1" == --backend ]]; then BACKEND="$2"; else MODEL="$2"; fi
+        shift 2 ;;
       -h|--help) usage ;;
       *) echo "error: unknown arg: $1" >&2; usage ;;
     esac
