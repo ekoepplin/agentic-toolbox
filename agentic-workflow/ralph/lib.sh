@@ -2,13 +2,19 @@
 # Shared plumbing for the ralph loop scripts — sourced, not executed.
 #
 #   once.sh / pi-once.sh   one iteration on one issue (Claude Code / pi)
-#   afk.sh  / pi-afk.sh    loop an iteration script until the issue closes
+#   afk.sh                 loop once.sh until the issue closes
+#   pi-afk.sh              loop pi-once.sh until the harness-run Verify is
+#                          green, then push + open a PR (never merge)
 #
 # Stays bash 3.2-compatible, so the loop also runs on a bare Mac.
 
 RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RALPH_ROOT="$(cd "$RALPH_DIR/../.." && pwd)"
 REPO="ekoepplin/agentic-toolbox"
+
+# ralph_gh <args...> — gh with the bot's credentials when BOT_GIT_USER is set
+# (inside a workbench plain gh is not logged in); plain gh otherwise.
+ralph_gh() { "$RALPH_ROOT/.devcontainer/as-bot.sh" gh "$@"; }
 
 # .env.ralph at the repo root sets RALPH_BACKEND / RALPH_MODEL defaults.
 if [[ -f "$RALPH_ROOT/.env.ralph" ]]; then
@@ -46,13 +52,69 @@ ralph_bad_backend() {
 # mission line, issue body, recent commits, then the loop prompt.
 ralph_mission() {
   local issue commits
-  issue=$(gh issue view "$1" --repo "$REPO" \
+  issue=$(ralph_gh issue view "$1" --repo "$REPO" \
     --json number,title,body,labels,state \
     --jq '"# Issue #\(.number): \(.title)\nState: \(.state)\nLabels: \(.labels | map(.name) | join(", "))\n\n\(.body)"') \
     || return 1
   commits=$(git log -n 5 --format='%h %ad %s' --date=short) || return 1
   printf 'MISSION: deliver issue #%s. Do NOT switch to other issues even if you see references to them.\n\n%s\n\nRecent commits:\n%s\n\n%s' \
     "$1" "$issue" "$commits" "$(cat "$2")"
+}
+
+# ── Execution contract (pi loop) ────────────────────────────────────────────
+# An issue qwen may run carries, in its body, an `## Execution plan` section
+# and a `## Verify` section whose first fenced block lists one shell command
+# per line; every command must exit 0. The loop runs them itself — qwen's own
+# claim of done is never trusted. See docs/harnesses/pi-agent-harness/ralph-on-pi.md.
+
+# ralph_issue_body <issue> — the issue body, CRLF-normalised.
+ralph_issue_body() {
+  ralph_gh issue view "$1" --repo "$REPO" --json body --jq .body | tr -d '\r'
+}
+
+# ralph_verify_cmds <body> — the commands in the first fenced block under
+# `## Verify`, one per line; blank lines and `#` comments are dropped.
+ralph_verify_cmds() {
+  printf '%s\n' "$1" | awk '
+    /^## / { in_verify = ($0 ~ /^## Verify[[:space:]]*$/); next }
+    in_verify && /^```/ { if (fence) exit; fence = 1; next }
+    fence && $0 !~ /^[[:space:]]*(#|$)/ { print }
+  '
+}
+
+# ralph_require_plan <issue> — exits 2 unless the issue carries the contract.
+ralph_require_plan() {
+  local body
+  body="$(ralph_issue_body "$1")" || { echo "error: cannot read issue #$1" >&2; exit 2; }
+  if ! printf '%s\n' "$body" | grep -q '^## Execution plan[[:space:]]*$' \
+    || [[ -z "$(ralph_verify_cmds "$body")" ]]; then
+    echo "ralph: issue #$1 has no execution plan ('## Execution plan' + a '## Verify' block) — refusing to run qwen; refine it first." >&2
+    exit 2
+  fi
+}
+
+# ralph_verify <issue> <ref> <log> — runs the issue's Verify commands in a
+# clean, detached worktree at <ref>, so only committed work can turn them
+# green. Appends each command and its output to <log>; returns 1 if any fails.
+ralph_verify() {
+  local cmds wt cmd rc=0
+  cmds="$(ralph_verify_cmds "$(ralph_issue_body "$1")")"
+  wt="$(mktemp -d "${TMPDIR:-/tmp}/ralph-verify.XXXXXX")"
+  git -C "$RALPH_ROOT" worktree add -q --detach "$wt" "$2" || { rm -rf "$wt"; return 2; }
+  : > "$3"
+  while IFS= read -r cmd; do
+    printf '$ %s\n' "$cmd" >> "$3"
+    if (cd "$wt" && bash -c "$cmd" < /dev/null) >> "$3" 2>&1; then
+      printf '[ok]\n' >> "$3"
+    else
+      printf '[FAILED: exit %s]\n' "$?" >> "$3"
+      rc=1
+    fi
+  done <<EOF
+$cmds
+EOF
+  git -C "$RALPH_ROOT" worktree remove --force "$wt"
+  return "$rc"
 }
 
 # ralph_afk <iteration-script> <issue> [max-iters] [flags...] — runs the
@@ -77,7 +139,7 @@ EOF
     shift
   fi
   for ((i = 1; i <= max; i++)); do
-    state=$(gh issue view "$issue" --repo "$REPO" --json state --jq '.state' 2>/dev/null || echo UNKNOWN)
+    state=$(ralph_gh issue view "$issue" --repo "$REPO" --json state --jq '.state' 2>/dev/null || echo UNKNOWN)
     if [[ "$state" == "CLOSED" ]]; then
       echo "Issue #$issue is CLOSED — done in $((i - 1)) iters."
       exit 0

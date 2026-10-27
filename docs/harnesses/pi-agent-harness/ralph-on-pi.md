@@ -18,13 +18,13 @@ pi — plus its prompt (`prompt.md` / `prompt-pi.md`).
 
 | ralph piece | on pi |
 |---|---|
-| AFK loop (issue-state polling, iter cap) | **Shared** — `pi-afk.sh` runs `lib.sh`'s loop over `pi-once.sh` |
+| AFK loop (issue-state polling, iter cap) | **Replaced** — `pi-afk.sh` runs the execution contract below: qwen in its own worktree, harness-run Verify, PR on green, never a merge |
 | Issue fetch + recent-commits + mission assembly | **Shared** (`lib.sh`) |
 | `once.sh` launch line (`claude … --permission-mode acceptEdits`) | **Replaced** with `pi -a -p …` (below) |
 | Backend routing via `ANTHROPIC_BASE_URL`/`AUTH_TOKEN` env vars | **Replaced** with `--model <provider>/<id>`; providers live in `models.json`, not env vars |
 | `settings.ralph.json` (permission allow-list) + `acceptEdits` | **Gone** — pi has no permission prompts, so an AFK loop can never stall on approval. Optional `--tools` restriction and/or a guardrail extension instead |
 | `claude --plugin-dir .` plugin-load smoke check (gate) | **Gone** — pi's skill discovery is path-based and deterministic; `scripts/check.sh` remains the gate |
-| `/code-review` in the prompt | The `code-review` skill is listed in pi's system prompt with its file path; the model reads it and follows it |
+| `/code-review` in the prompt | **Dropped** for qwen — a qwen sub-review of qwen adds tokens, not signal; review is Opus's job on the PR (#32/#33) |
 
 ## One-time setup
 
@@ -121,8 +121,40 @@ The launch itself:
 pi -a -p --model "$MODEL_PATTERN" --name "ralph #$ISSUE" "$mission"
 ```
 
-`pi-afk.sh` loops it until the issue closes — the two harnesses are selectable
-per issue (local qwen for routine slices, Anthropic for the hard one).
+`pi-afk.sh` runs it under the execution contract (next section); the two
+harnesses stay selectable per issue (local qwen for routine slices, Anthropic
+for the hard one).
+
+## The execution contract — `pi-afk.sh`
+
+```bash
+agentic-workflow/ralph/pi-afk.sh <issue> [max-iters] --model qwen3.8-flash-next-a5b
+```
+
+1. **Refined issues only.** The issue body must carry an `## Execution plan`
+   section and a `## Verify` section whose first fenced block lists one shell
+   command per line. Without both, `pi-once.sh` and `pi-afk.sh` exit 2 before
+   pi starts.
+2. **Own worktree.** qwen works in `~/.cache/ralph/issue-<N>` on branch
+   `ralph/issue-<N>`, cut from `origin/master` — the base's shared working
+   tree and branch are never switched. Override the location with
+   `RALPH_WORKTREES`.
+3. **qwen only commits.** The prompt forbids push, PR and merge; the
+   guardrail extension blocks force-push, `git push … master`, `gh pr merge`
+   and the merge API (defence in depth — the `master` ruleset is the control).
+4. **The harness verifies.** After every iteration `lib.sh`'s `ralph_verify`
+   runs each Verify command in a clean, detached worktree at the branch head,
+   so only committed work counts. Red: the output goes into the next
+   iteration's mission (`# PREVIOUS ITERATION`). Use only gates that work in a
+   workbench (see `docs/harnesses/dock-e2e.md`).
+5. **Green → PR, never a merge.** The loop pushes the branch and opens a PR as
+   the bot (`as-bot`), with the Verify log in the body. The ruleset requires an
+   approval from someone other than the pusher.
+
+Exit codes: `0` green + PR open, `1` max iterations (default 10), `2` refused,
+`3` green without a commit (the plan's checks don't fail on base — re-refine).
+`ralph_gh` runs every `gh` call through `as-bot`, because plain `gh` is not
+logged in inside a workbench.
 
 ### Launch flags, decoded
 
@@ -212,9 +244,9 @@ pi -a -p --model vllm-hpzgx/qwen --no-tools --no-session "Say the word: ready"
 pi -a -p --model vllm-hpzgx/qwen --no-tools --no-session \
   "List the names of the skills available to you."
 
-# 4. Dry iteration on a throwaway GitHub issue
-agentic-workflow/ralph/pi-once.sh <scratch-issue>
-# expect: one conventional commit, Closes #N trailer, issue auto-closed on push
+# 4. One contract run on a refined scratch issue
+agentic-workflow/ralph/pi-afk.sh <scratch-issue> 3 --model <served-id>
+# expect: commit(s) on ralph/issue-<N>, harness Verify green, PR opened, issue still open
 ```
 
 ## Validation
