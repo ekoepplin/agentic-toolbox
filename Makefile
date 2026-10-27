@@ -19,12 +19,17 @@ BASE_IMAGE := agentic-toolbox-base:latest
 DOCKERFILE := .devcontainer/Dockerfile
 CONTEXT    := .devcontainer
 
-.PHONY: check image probe probe-voice probe-dock dock dock-e2e
+.PHONY: check guardrail-test image probe probe-voice probe-dock dock dock-e2e
 
 # The static gate: adapter-manifest drift guard (plugin.json <-> skills/).
 # No Docker needed; runs on a bare Mac.
 check:
 	scripts/check.sh
+
+# Table test for the pi guardrail's regex table
+# (.pi/extensions/ralph-guardrail.ts). Needs only Node (>= 22); no Docker.
+guardrail-test:
+	node --experimental-strip-types agentic-workflow/ralph/guardrail-test.ts
 
 # Build the base image from the base's own files only. The Dockerfile needs
 # BuildKit (COPY --chmod, cache mounts); forcing it makes a missing buildx
