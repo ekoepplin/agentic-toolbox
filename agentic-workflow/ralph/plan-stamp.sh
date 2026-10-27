@@ -9,6 +9,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 ISSUE="${1:-}"
 [[ -n "$ISSUE" ]] || { echo "usage: $0 <issue-number>" >&2; exit 2; }
+ralph_target
 
 body="$(ralph_issue_body "$ISSUE")"
 # Command substitution also drops trailing blank lines, so re-stamping never
@@ -19,8 +20,8 @@ if ! problem="$(ralph_plan_problem "$clean" unstamped)"; then
   exit 2
 fi
 
-"$RALPH_ROOT/.devcontainer/as-bot.sh" git -C "$RALPH_ROOT" fetch -q origin master
-base="$(git -C "$RALPH_ROOT" rev-parse origin/master)"
+"$RALPH_ROOT/.devcontainer/as-bot.sh" git -C "$PROJECT_ROOT" fetch -q origin "$DEFAULT_BRANCH"
+base="$(git -C "$PROJECT_ROOT" rev-parse "origin/$DEFAULT_BRANCH")"
 hash="$(ralph_plan_hash "$clean")"
 printf '%s\n\n<!-- ralph:plan base=%s hash=%s -->\n' "$clean" "$base" "$hash" \
   | ralph_gh issue edit "$ISSUE" --repo "$REPO" --body-file - >/dev/null

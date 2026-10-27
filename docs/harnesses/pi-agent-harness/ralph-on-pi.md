@@ -127,9 +127,21 @@ for the hard one).
 
 ## The execution contract — `pi-afk.sh`
 
+Run it from the root of the **target repo** — the base itself or any docked
+host project (the base is mounted at its Mac path in every workbench):
+
 ```bash
-agentic-workflow/ralph/pi-afk.sh <issue> [max-iters] --model qwen3.8-flash-next-a5b
+cd /Users/ekoepplin/repos/<target-repo>
+/Users/ekoepplin/repos/agentic-toolbox/agentic-workflow/ralph/plan-stamp.sh <issue>   # once per plan
+/Users/ekoepplin/repos/agentic-toolbox/agentic-workflow/ralph/pi-afk.sh <issue> [max-iters]
 ```
+
+The target is the git repo of the current directory: owner/name from its
+GitHub `origin`, the base branch from its default branch on GitHub. The base
+only supplies the scripts, `as-bot` and `.env.ralph` (backend/model
+defaults, e.g. `RALPH_MODEL=qwen3.8-flash-next-a5b`). Outside a git repo or
+without a GitHub origin the scripts exit 2. A host must be onboarded first
+(bot write access, ruleset, labels — #54).
 
 1. **Stamped plans only.** The issue body must carry this shape (the format
    is defined once, in `lib.sh`; refine (#31) writes it):
@@ -155,13 +167,13 @@ agentic-workflow/ralph/pi-afk.sh <issue> [max-iters] --model qwen3.8-flash-next-
    when a section or the files block is missing, the plan is unstamped, or it
    changed since stamping.
    They also exit 2 unless `as-bot` resolves to a bot whose token logs in as
-   that same account (`ralph_require_bot`): qwen never runs with your own
+   that same account and can push to the target (`ralph_require_bot`): qwen never runs with your own
    credentials, which on the Mac are the admin's and may bypass the ruleset.
    So run the loop **inside a workbench** docked with `BOT_*` set.
-2. **Own worktree.** qwen works in `~/.cache/ralph/issue-<N>` on branch
-   `ralph/issue-<N>`, cut from `origin/master` — the base's shared working
-   tree and branch are never switched. Override the location with
-   `RALPH_WORKTREES`.
+2. **Own worktree.** qwen works in `~/.cache/ralph/<owner>-<repo>/issue-<N>`
+   on branch `ralph/issue-<N>`, cut from `origin/<default branch>` — the
+   target's working tree and branch are never switched. Override the location
+   with `RALPH_WORKTREES`.
 3. **qwen only commits.** The prompt forbids push, PR and merge; the
    guardrail extension blocks force-push, `git push … master`, `gh pr merge`
    and the merge API (defence in depth — the `master` ruleset is the control).
