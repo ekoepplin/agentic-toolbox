@@ -12,6 +12,9 @@ RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RALPH_ROOT="$(cd "$RALPH_DIR/../.." && pwd)"
 REPO="ekoepplin/agentic-toolbox"
 
+# An AFK loop must never wait on a credential prompt: missing credentials fail.
+export GIT_TERMINAL_PROMPT=0
+
 # ralph_gh <args...> — gh with the bot's credentials when BOT_GIT_USER is set
 # (inside a workbench plain gh is not logged in); plain gh otherwise.
 ralph_gh() { "$RALPH_ROOT/.devcontainer/as-bot.sh" gh "$@"; }

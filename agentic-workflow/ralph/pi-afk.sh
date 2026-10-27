@@ -34,7 +34,8 @@ STATE="$WT.state"
 mkdir -p "$STATE"
 AS_BOT="$RALPH_ROOT/.devcontainer/as-bot.sh"
 
-git -C "$RALPH_ROOT" fetch -q origin master
+# Through as-bot: inside a workbench plain git has no GitHub credentials.
+"$AS_BOT" git -C "$RALPH_ROOT" fetch -q origin master
 if [[ ! -d "$WT" ]]; then
   if git -C "$RALPH_ROOT" rev-parse -q --verify "refs/heads/$BRANCH" >/dev/null; then
     git -C "$RALPH_ROOT" worktree add -q "$WT" "$BRANCH"
