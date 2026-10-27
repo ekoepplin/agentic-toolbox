@@ -65,7 +65,9 @@ entry and the seeded entry is the `baseUrl` host (`localhost` vs
 - **Extensions** are pinned separately in `.devcontainer/pi-extensions.lock` and
   installed after the config is seeded — see [pi-extensions.md](./pi-extensions.md).
 - **Skills** are exposed to pi via the `skills[]` array in `settings.json`,
-  which `dock.sh` points at the base's shipped + vendored skill directories.
+  which `dock.sh` points at the base's shipped skills (`skills/`) and the
+  curated vendored links (`.claude/skills/`) — not the raw `.agents/skills/`
+  clone, which would expose upstream drafts (see `ralph-on-pi.md` §2).
 
 ## Validate
 

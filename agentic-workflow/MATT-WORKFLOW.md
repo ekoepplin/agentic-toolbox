@@ -8,7 +8,7 @@ The intended pipeline is **think → plan → break down → execute (loop) → 
 
 ## 1. Think — `/grill-with-docs`
 
-Stress-test the idea against `CONTEXT.md` + `docs/adr/`. Updates terminology and ADRs inline as decisions crystallise. Output: shared understanding, no code yet.
+Stress-test the idea against `GLOSSARY.md` + `docs/adr/`. Updates terminology and ADRs inline as decisions crystallise. Output: shared understanding, no code yet.
 
 ## 2. Spec — `/to-spec`
 
@@ -28,7 +28,7 @@ State-machine review of incoming issues. Promotes `needs-triage` → `ready-for-
 
 ## 5. Execute — `ralph/` loop
 
-This is where the `ralph/` folder fits. Both scripts target **one specific issue per invocation** — they do not auto-pick from the queue. `pi-once.sh` / `pi-afk.sh` are the same loop on pi (see `docs/harnesses/pi-agent-harness/ralph-on-pi.md`).
+This is where the `ralph/` folder fits. Both scripts target **one specific issue per invocation** — they do not auto-pick from the queue. `pi-once.sh` / `pi-afk.sh` run the loop on pi under a stricter contract: refined issues only, harness-run Verify, PR on green, never a merge (see `docs/harnesses/pi-agent-harness/ralph-on-pi.md`).
 
 **One iteration** (interactive, one claude session against one issue):
 

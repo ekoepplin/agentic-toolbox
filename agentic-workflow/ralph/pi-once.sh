@@ -1,5 +1,7 @@
 #!/bin/bash
-# One ralph iteration on one issue, driven by pi. See lib.sh and
+# One ralph iteration on one refined issue, driven by pi, in the current
+# directory (pi-afk.sh runs it inside the issue's worktree). Refuses issues
+# without an execution plan. See lib.sh and
 # docs/harnesses/pi-agent-harness/ralph-on-pi.md.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -22,6 +24,7 @@ EOF2
 }
 
 ralph_parse_once "$@"
+ralph_require_plan "$ISSUE"
 
 # Map backend -> pi model pattern (provider/id)
 case "$BACKEND" in
@@ -44,6 +47,10 @@ esac
 echo "ralph-pi: backend=$BACKEND model=$MODEL_PATTERN issue=#$ISSUE" >&2
 
 mission=$(ralph_mission "$ISSUE" "$RALPH_DIR/prompt-pi.md")
+# pi-afk.sh hands the previous iteration's failed Verify output back in.
+if [[ -s "${RALPH_FEEDBACK:-}" ]]; then
+  mission="$mission"$'\n\n# PREVIOUS ITERATION\n\n'"$(cat "$RALPH_FEEDBACK")"
+fi
 
 # as-bot: commit/push/gh as the bot account when BOT_GIT_USER is set.
 "$RALPH_ROOT/.devcontainer/as-bot.sh" pi -a -p --model "$MODEL_PATTERN" --name "ralph #$ISSUE" "$mission"

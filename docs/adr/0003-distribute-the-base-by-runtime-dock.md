@@ -2,7 +2,7 @@
 
 **Status:** accepted — supersedes [ADR-0002](0002-distribute-as-a-claude-code-plugin-via-marketplace.md)
 
-The **base** (see `CONTEXT.md`) is consumed by **host projects**: they need the base's content — skills, subagents, commands, hooks, docs — inside working agent sessions for every supported **harness** (today, Claude Code and pi), inside the base's docker image and compose environment. ADR-0002 answered that question back when the answer was a Claude Code plugin installed from a marketplace: one harness, one install step, and no environment at all. The decision had to be reopened. The options considered:
+The **base** (see `GLOSSARY.md`) is consumed by **host projects**: they need the base's content — skills, subagents, commands, hooks, docs — inside working agent sessions for every supported **harness** (today, Claude Code and pi), inside the base's docker image and compose environment. ADR-0002 answered that question back when the answer was a Claude Code plugin installed from a marketplace: one harness, one install step, and no environment at all. The decision had to be reopened. The options considered:
 
 - **Keep the marketplace plugin** — consumers `claude plugin install` the Claude Code **harness adapter**; pi and the workbench environment would need separate, per-consumer wiring.
 - **Runtime dock** — a host project's compose **workbench** bind-mounts the base repo at a fixed path, and the **dock step** (`.devcontainer/scripts/dock.sh`) wires every harness adapter into its discovery paths on every workbench start. No packaging, no publishing, no install.
@@ -21,4 +21,4 @@ Consequences:
 - **The base is personal, not public.** A host docks a local clone of the base at a fixed path (`BASE_PATH` in the host's committed `.env`); anyone without that clone cannot consume the base. Deliberate — this is a personal base, not a public package.
 - **The dock step is load-bearing runtime.** It runs on every workbench start, must stay idempotent (a second run is a no-op), and must never take the workbench down when it fails. The dock E2E is the runtime gate; `scripts/check.sh` is the static gate on the adapter-manifest contract.
 - **Upgrades are unversioned.** A host sees the base's working tree, not a released revision; reproducibility rests on the base's git state (hence the dirty-base warning), not on a marketplace version.
-- **ADR-0002's marketplace consequences are void.** `marketplace.json` is gone and "consumer repo" is retired vocabulary (see `CONTEXT.md`). What survives of ADR-0002 is namespaced `/agentic-toolbox:<name>` invocation and `plugin.json` as the shipped/draft contract — both now delivered by docking.
+- **ADR-0002's marketplace consequences are void.** `marketplace.json` is gone and "consumer repo" is retired vocabulary (see `GLOSSARY.md`). What survives of ADR-0002 is namespaced `/agentic-toolbox:<name>` invocation and `plugin.json` as the shipped/draft contract — both now delivered by docking.

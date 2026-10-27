@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 # Issue #10 acceptance probes, run inside the dogfooded workbench
 # (make probe-dock → docker compose exec). Every probe is deterministic:
-# no LLM call, no model endpoint needed. Requires the dock step to have run
-# (i.e. the workbench is up — it runs on every start via the compose command).
+# no LLM call, no model endpoint needed. Requires the workbench to be up; waits
+# for the dock step (run on every start via the compose command) to finish.
 set -euo pipefail
 
 BASE="$(cd "$(dirname "$0")/../.." && pwd)"
 echo "== dock probes: workbench (base at $BASE) =="
+
+# Right after `docker compose up` the dock step is still running; probing then
+# fails spuriously. The compose command (sh -c '… dock.sh …; exec sleep
+# infinity') names dock.sh until the step ends, so wait for no match.
+deadline=$(( $(date +%s) + 600 ))
+while pgrep -f 'scripts/dock\.sh' >/dev/null; do
+  [ "$(date +%s)" -lt "$deadline" ] \
+    || { echo "FATAL: dock step still running after 600s"; exit 1; }
+  [ -n "${waited:-}" ] || { echo "waiting for the dock step to finish…"; waited=1; }
+  sleep 2
+done
 
 # Shipped skills come from the Claude Code adapter's manifest — the contract
 # scripts/check.sh enforces — so no probe hard-codes skill names or counts.
@@ -73,13 +84,24 @@ for s in ${shipped[@]+"${shipped[@]}"} code-review; do
 done
 echo "pi: deterministic skill expansion passed (${#shipped[@]} shipped + vendored code-review)"
 
+# Upstream drafts and deprecated skills never reach pi — neither through the
+# seeded paths nor the project's auto-discovered .agents/skills/. The names
+# come from disk, so the probe follows whatever upstream ships.
+for d in "$BASE"/.agents/skills/*/skills/in-progress/*/ "$BASE"/.agents/skills/*/skills/deprecated/*/; do
+  [ -f "$d/SKILL.md" ] || continue
+  ! echo "$cmds" | grep -qx "skill:$(basename "$d")" \
+    || { echo "FATAL: pi exposes upstream draft/deprecated skill:$(basename "$d")"; exit 1; }
+done
+echo "pi: no upstream draft or deprecated skill exposed"
+
 # ── pi: the base's skill paths are seeded in the container config ───────────
 python3 - "$HOME/.pi/agent/settings.json" "$BASE" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
 skills = data.get("skills", [])
 assert sys.argv[2] + "/skills" in skills, "base skills/ path not seeded"
-assert sys.argv[2] + "/.agents/skills" in skills, "vendored path not seeded"
+assert sys.argv[2] + "/.claude/skills" in skills, "vendored path not seeded"
+assert sys.argv[2] + "/.agents/skills" not in skills, "raw vendored clone still seeded"
 print("pi: base skill paths seeded in settings.json")
 PY
 

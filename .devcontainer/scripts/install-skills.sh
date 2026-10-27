@@ -71,13 +71,27 @@ clone_at_ref() {
   git_repo "$name" -c advice.detachedHead=false checkout --quiet "$ref"
 }
 
-# Remove symlinks whose target no longer exists — i.e. skills renamed or dropped
-# upstream since the last run. Live symlinks are recreated by the loop below.
-prune_dangling_symlinks() {
+# Upstream buckets that are never wired: deprecated/ (skills Matt no longer
+# uses) and in-progress/ (upstream drafts — the same rule as the base's own
+# shipped/draft split).
+skipped_bucket() {
+  case "$1" in deprecated|in-progress) return 0 ;; esac
+  return 1
+}
+
+# Remove symlinks whose target no longer exists (skills renamed or dropped
+# upstream since the last run) or now sits in a skipped bucket (a skill moved
+# to deprecated/, or a link from before in-progress/ was skipped). Live
+# symlinks are recreated by the loop below.
+prune_stale_symlinks() {
   local l
   for l in "$CLAUDE_SKILLS_DIR"/*; do
-    if [ -L "$l" ] && [ ! -e "$l" ]; then
+    [ -L "$l" ] || continue
+    if [ ! -e "$l" ]; then
       echo "  ✗ $(basename "$l") (gone upstream)"
+      rm -f "$l"
+    elif skipped_bucket "$(basename "$(dirname "$(readlink "$l")")")"; then
+      echo "  ✗ $(basename "$l") (upstream draft or deprecated)"
       rm -f "$l"
     fi
   done
@@ -85,14 +99,13 @@ prune_dangling_symlinks() {
 
 # ── mattpocock/skills ────────────────────────────────────────────────────────
 # Skills live two levels deep: skills/<category>/<skill-name>/SKILL.md
-# Skip skills/deprecated/<name> — those are skills Matt no longer uses.
 clone_at_ref mattpocock-skills https://github.com/mattpocock/skills "$(pin_for mattpocock-skills)"
 
-prune_dangling_symlinks
+prune_stale_symlinks
 
 for dir in "$AGENTS_DIR/mattpocock-skills/skills"/*/*/; do
   [ -f "${dir}SKILL.md" ] || continue
-  [ "$(basename "$(dirname "$dir")")" = "deprecated" ] && continue
+  skipped_bucket "$(basename "$(dirname "$dir")")" && continue
   skill_name="$(basename "$dir")"
   link="$CLAUDE_SKILLS_DIR/$skill_name"
   # No-op when the symlink already points at this target (second run).

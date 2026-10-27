@@ -2,78 +2,55 @@
 
 You work on ONE issue per run. The issue body has been injected above this prompt. Do not switch to other issues even if their numbers appear in references, drafts, or commit history. If your work would span multiple issues, stop and add a comment to the current issue explaining the dependency.
 
+You run inside a git worktree on the issue's own branch (`ralph/issue-<N>`). Stay in it.
+
+# THE PLAN IS THE CONTRACT
+
+The issue body contains an `## Execution plan` (files to touch, steps, what is out of scope) and a `## Verify` block. Follow the plan. Touch only the files it lists. If the plan is wrong or impossible, do not improvise a different design: comment on the issue explaining why, and exit.
+
+After you finish, the loop itself runs every `## Verify` command on your **last commit**, in a clean checkout. Uncommitted work does not count. Never edit the Verify commands, and never edit a script a Verify command calls unless the plan lists it.
+
 # PRE-CHECK
 
-Before writing any code, verify the acceptance criteria are not already satisfied in the repo (file deletions, dependency removals, and pipeline additions sometimes ship in earlier commits without the issue being closed). If they are already satisfied:
-
-```
-gh issue close <N> --repo ekoepplin/agentic-toolbox -c "Already shipped in <sha>"
-```
-
-Then exit. Do not invent work.
+Before writing any code, verify the acceptance criteria are not already satisfied in the repo. If they are, comment on the issue with the commit that shipped them and exit. Do not invent work.
 
 # EXPLORATION
 
-Explore the repo. Read `docs/adr/` for architectural decisions and `CONTEXT.md` for domain vocabulary. If a per-issue draft exists at `tasks/drafts/issue-*.md` matching this issue number, read it.
+Read the files the plan lists. Read `docs/adr/` for architectural decisions and `GLOSSARY.md` for domain vocabulary when the plan touches them. If a per-issue draft exists at `agentic-workflow/tasks/drafts/issue-*.md` matching this issue number, read it.
 
 # IMPLEMENTATION
 
-Complete the task. This repo is a Claude Code **plugin** (see `CONTEXT.md`), not a Python pipeline — there is no unit-test framework. The behavioural check is the plugin drift guard (see FEEDBACK LOOPS). Touch only files within the issue scope. Do not refactor adjacent code, do not bundle other issues' work, do not "improve" things that aren't broken.
+Complete the steps of the plan. This repo is a Claude Code **plugin** (see `GLOSSARY.md`), not a Python pipeline — there is no unit-test framework. Do not refactor adjacent code, do not bundle other issues' work, do not "improve" things that aren't broken.
 
-# FEEDBACK LOOPS
+# FEEDBACK LOOP
 
-Before committing, run whichever of these apply:
-
-- `scripts/check.sh` — the plugin drift guard: verifies `plugin.json` ↔ shipped skills on disk are in sync.
-
-On pi there is no plugin-load smoke-check: skills are discovered from `.agents/skills/` at startup (trusted via `-a`), so the drift guard is the gate.
-
-Every gate that exists must pass. If a gate fails, fix and re-run. Do not commit on red.
-
-# CODE REVIEW
-
-Once the gates are green, load and follow the `code-review` skill: its SKILL.md path is listed in the available-skills block of your system prompt — read that file and follow it on your diff (two-axis: Standards + Spec against this issue). Address any blocking findings and re-run the gates before committing.
+Run the `## Verify` commands yourself before committing, and fix anything red. If a `# PREVIOUS ITERATION` section appears below, the loop already ran them on your last commit and they failed: fix that cause first.
 
 # STAGING DISCIPLINE
 
-Use `git add -- <specific paths>`. NEVER `git add -A` or `git add .` — they sweep up unrelated working-tree WIP and bundle it into your commit, breaking attribution.
+Use `git add -- <specific paths>`. NEVER `git add -A` or `git add .` — they sweep up unrelated working-tree changes.
 
-Before every commit, run `git diff --staged --name-only` and verify every staged path is either named in the issue body or is a test/doc/lock-file directly produced by this issue's work. Unstage anything else:
+Before every commit, run `git diff --staged --name-only` and verify every staged path is listed in the plan. Unstage anything else:
 
 ```
 git reset HEAD -- <path>
 ```
 
-If you cannot identify why a file is staged, unstage it. Better to under-commit and let a follow-up run pick it up than to over-commit and pollute history.
-
 # COMMIT
 
-Make ONE atomic commit for this issue. Stage only the files within issue scope. The commit message must:
+Commit to the current branch. The commit message must:
 
-1. Use conventional-commit prefix (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
+1. Use a conventional-commit prefix (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
 2. State key decisions made
-3. End with a `Closes #<N>` trailer so GitHub auto-closes the issue on push
+3. End with a `Closes #<N>` trailer
 
-# KANBAN
+# HAND-OFF
 
-GitHub auto-closes the issue from the `Closes #<N>` trailer once the commit lands on master. There is no `move-issue.sh` in this repo, so the kanban card is moved manually — do not attempt to run a board-mover script.
+Do NOT push, do NOT open a pull request, do NOT merge, and never touch `master`. The loop verifies your last commit, then pushes the branch and opens the PR; a reviewer decides about the merge.
 
-# UNATTENDED MERGE
-
-This repo runs ralph unattended: no human is at the merge point. After your commit is made and all gates are green:
-
-1. Push the branch: `git push -u origin HEAD`
-2. Create and squash-merge the PR to master in one step:
-   `gh pr create --fill --base master --squash --merge`
-   (If a PR for this branch already exists from a prior iteration, use `gh pr merge --squash` instead.)
-3. Verify the issue is CLOSED (the Closes trailer fires on merge):
-   `gh issue view <N> --json state --jq .state`
-
-Do not merge while any gate is red. If the merge is blocked because master moved, rebase onto master, re-run every gate, and retry.
-
-If you cannot finish in this run, leave a comment summarising what's done and what remains, then exit:
+If you cannot finish in this run, commit what is solid, leave a comment summarising what's done and what remains, then exit:
 ```
 gh issue comment <N> --repo ekoepplin/agentic-toolbox --body "..."
 ```
 
-Do NOT close the issue with partial work.
+Do NOT close the issue.

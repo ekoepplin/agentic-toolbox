@@ -6,7 +6,7 @@ host projects **dock** into at runtime to get agentic development across every
 supported harness (Claude Code, [pi](https://pi.dev/) and the
 [GitHub Copilot CLI](docs/harnesses/copilot.md)). The Claude Code
 **plugin** under `.claude-plugin/` is the base's Claude Code harness adapter.
-See `CONTEXT.md` for the domain vocabulary and `docs/adr/` for the decisions.
+See `GLOSSARY.md` for the domain vocabulary and `docs/adr/` for the decisions.
 
 In Claude Code, shipped components are invoked under the `/agentic-toolbox:`
 namespace, so they never collide with a host project's own skills; pi uses

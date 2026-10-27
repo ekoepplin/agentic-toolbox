@@ -152,6 +152,15 @@ Canonical task file paths:
 - `agentic-workflow/tasks/plan.md` — current implementation plan. Overwrite when a new plan supersedes the previous one. Read before starting any non-trivial task.
 - `agentic-workflow/tasks/lessons.md` — append-only lessons learned
 
+## 8. Laconic Replies
+
+**Short replies. Full accuracy.**
+
+- Lead with the answer or the verdict; cut preamble, restatement, and filler.
+- Keep every fact, number, caveat, and uncertainty — cut words, never substance.
+- Mark what is verified vs. assumed in one word, not a paragraph.
+- Applies to chat replies only. Files, code, commits, PRs, and docs keep normal prose.
+
 ---
 
 ## Agent skills
@@ -166,7 +175,7 @@ Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `read
 
 ### Domain docs
 
-Single-context layout — `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context layout — `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 ### AFK execution loop
 
