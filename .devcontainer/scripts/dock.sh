@@ -194,21 +194,32 @@ bash "$SCRIPTS_DIR/install-pi-extensions.sh"
 COPILOT_SKILLS="$HOME/.copilot/skills"
 mkdir -p "$COPILOT_SKILLS"
 changed=0
+wanted=""
 for d in "$BASE_DIR"/.claude/skills/* "$BASE_DIR"/skills/*/; do
   d="${d%/}"
   [ "$(basename "$d")" = in-progress ] && continue
   [ -f "$d/SKILL.md" ] || continue
   target="$(readlink -f "$d")"
   link="$COPILOT_SKILLS/$(basename "$d")"
+  wanted="$wanted$(basename "$d")"$'\n'
   [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && continue
   ln -sfn "$target" "$link"
   changed=$((changed + 1))
 done
-# Drop links whose skill was removed or renamed in the base.
+# Drop links whose skill was removed or renamed in the base (dangling), or
+# that still resolve into the base but are no longer wired — e.g. a vendored
+# skill install-skills.sh stopped linking. Links pointing elsewhere are not ours.
 while IFS= read -r stale; do
   rm "$stale"
   changed=$((changed + 1))
-done < <(find "$COPILOT_SKILLS" -maxdepth 1 -xtype l)
+done < <(
+  find "$COPILOT_SKILLS" -maxdepth 1 -xtype l
+  for l in "$COPILOT_SKILLS"/*; do
+    [ -L "$l" ] && [ -e "$l" ] || continue
+    [[ "$(readlink -f "$l")" == "$BASE_DIR"/* ]] || continue
+    printf '%s' "$wanted" | grep -qxF "$(basename "$l")" || printf '%s\n' "$l"
+  done
+)
 if [ "$changed" -eq 0 ]; then
   echo "copilot: skills in sync ($COPILOT_SKILLS)"
 else
