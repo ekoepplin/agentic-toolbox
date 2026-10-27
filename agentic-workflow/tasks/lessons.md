@@ -4,6 +4,17 @@ Append-only. Most recent at top.
 
 ---
 
+## 2026-10-27 — workbench paths are Mac paths, not `~`
+
+### Never write `~/repos/...` in instructions for a workbench shell
+I told the owner to `cd ~/repos/agentic-toolbox` inside the workbench; there
+`~` is `/home/node`, and the repo lives at its mirrored Mac path
+`/Users/ekoepplin/repos/agentic-toolbox` (ADR-0004). **Rule:** in any command
+meant for a workbench, spell repo paths absolute as the Mac path (or `$BASE`);
+`~` there only holds container-local state (`~/.pi`, `~/.copilot`, `~/.cache`).
+
+---
+
 ## 2026-10-22 — bot identity lives in a dotfiles function, not env vars
 
 ### Check ~/repos/dotfiles before answering "who does the agent run as"

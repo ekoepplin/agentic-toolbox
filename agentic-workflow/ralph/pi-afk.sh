@@ -26,6 +26,7 @@ if [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]]; then
 fi
 
 ralph_require_plan "$ISSUE"
+ralph_require_bot
 
 BRANCH="ralph/issue-$ISSUE"
 WT="${RALPH_WORKTREES:-$HOME/.cache/ralph}/issue-$ISSUE"

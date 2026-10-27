@@ -93,6 +93,24 @@ ralph_require_plan() {
   fi
 }
 
+# ralph_require_bot — exits 2 unless as-bot resolves to a bot identity whose
+# token logs in as that same account. Without it qwen would commit, push and
+# open PRs with the caller's own credentials — on the Mac that is the admin,
+# who may bypass the master ruleset.
+ralph_require_bot() {
+  local user login
+  user="$("$RALPH_ROOT/.devcontainer/as-bot.sh" sh -c 'printf %s "${GIT_AUTHOR_NAME:-}"')"
+  if [[ -z "$user" ]]; then
+    echo "ralph: no bot identity (BOT_GIT_USER/BOT_GH_TOKEN unset, no ~/.config/as-bot.env) — refusing to run qwen with your own credentials; run it in a workbench docked with BOT_* set." >&2
+    exit 2
+  fi
+  login="$(ralph_gh api user --jq .login 2>/dev/null || true)"
+  if [[ "$login" != "$user" ]]; then
+    echo "ralph: bot token logs in as '${login:-nothing}', not '$user' — refusing to run qwen." >&2
+    exit 2
+  fi
+}
+
 # ralph_verify <issue> <ref> <log> — runs the issue's Verify commands in a
 # clean, detached worktree at <ref>, so only committed work can turn them
 # green. Appends each command and its output to <log>; returns 1 if any fails.
