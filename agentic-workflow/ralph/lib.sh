@@ -67,10 +67,26 @@ ralph_mission() {
 }
 
 # ── Execution contract (pi loop) ────────────────────────────────────────────
-# An issue qwen may run carries, in its body, an `## Execution plan` section
-# and a `## Verify` section whose first fenced block lists one shell command
-# per line; every command must exit 0. The loop runs them itself — qwen's own
-# claim of done is never trusted. See docs/harnesses/pi-agent-harness/ralph-on-pi.md.
+# An issue qwen may run carries a stamped plan in its body. This is the one
+# format refine (#31) writes and the only one the loop accepts:
+#
+#   ## Execution plan
+#   steps, out of scope, …
+#   ```files
+#   path/to/file            one planned path per line; " (new)" may follow
+#   ```
+#   ## Verify
+#   ```
+#   one shell command per line; every one must exit 0
+#   ```
+#   <!-- ralph:plan base=<sha> hash=<sha256> -->
+#
+# hash: sha256 of the two sections, headings included, with marker lines,
+# blank lines and trailing whitespace dropped (so edits elsewhere in the body
+# don't count). base: origin/master when the plan was stamped. plan-stamp.sh
+# writes the marker; nothing else should. The loop runs Verify itself and gates
+# the diff against the files block — qwen's claim of done is never trusted.
+# See docs/harnesses/pi-agent-harness/ralph-on-pi.md.
 
 # ralph_issue_body <issue> — the issue body, CRLF-normalised.
 ralph_issue_body() {
@@ -87,13 +103,58 @@ ralph_verify_cmds() {
   '
 }
 
-# ralph_require_plan <issue> — exits 2 unless the issue carries the contract.
+# ralph_plan_files <body> — the paths in the first ```files block of the
+# `## Execution plan` section, one per line (a trailing " (new)" is dropped).
+ralph_plan_files() {
+  printf '%s\n' "$1" | awk '
+    /^## / { in_plan = ($0 ~ /^## Execution plan[[:space:]]*$/); next }
+    in_plan && !fence && /^```files[[:space:]]*$/ { fence = 1; next }
+    fence && /^```/ { exit }
+    fence {
+      sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); sub(/[[:space:]]+\(new\)$/, "")
+      if ($0 != "" && $0 !~ /^#/) print
+    }
+  '
+}
+
+# ralph_plan_hash <body> — the plan hash (see the format above).
+ralph_plan_hash() {
+  printf '%s\n' "$1" | awk '
+    /^## / { keep = ($0 ~ /^## (Execution plan|Verify)[[:space:]]*$/) }
+    keep && $0 !~ /^<!-- ralph:plan / { sub(/[[:space:]]+$/, ""); if ($0 != "") print }
+  ' | python3 -c 'import hashlib, sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
+}
+
+# ralph_plan_marker <body> — "<base> <hash>" from the marker, empty if none.
+ralph_plan_marker() {
+  printf '%s\n' "$1" | sed -n 's/^<!-- ralph:plan base=\([0-9a-f]*\) hash=\([0-9a-f]*\) -->[[:space:]]*$/\1 \2/p' | head -n1
+}
+
+# ralph_plan_problem <body> [unstamped] — prints why the body is not a
+# runnable plan and returns 1; returns 0 silently when it is. With
+# "unstamped", the marker is not required (plan-stamp.sh's precheck).
+ralph_plan_problem() {
+  local marker
+  if ! printf '%s\n' "$1" | grep -q '^## Execution plan[[:space:]]*$'; then
+    echo "no '## Execution plan' section"; return 1
+  fi
+  [[ -n "$(ralph_verify_cmds "$1")" ]] || { echo "no command in the '## Verify' block"; return 1; }
+  [[ -n "$(ralph_plan_files "$1")" ]] || { echo "no \`\`\`files block in the plan"; return 1; }
+  [[ "${2:-}" == unstamped ]] && return 0
+  marker="$(ralph_plan_marker "$1")"
+  [[ -n "$marker" ]] || { echo "the plan is not stamped (no ralph:plan marker; run plan-stamp.sh)"; return 1; }
+  if [[ "${marker#* }" != "$(ralph_plan_hash "$1")" ]]; then
+    echo "the plan changed since it was stamped (hash mismatch) — re-refine or re-stamp it"; return 1
+  fi
+}
+
+# ralph_require_plan <issue> — exits 2 unless the issue carries a stamped,
+# unchanged plan; on success sets PLAN_BODY to the body it checked.
 ralph_require_plan() {
-  local body
-  body="$(ralph_issue_body "$1")" || { echo "error: cannot read issue #$1" >&2; exit 2; }
-  if ! printf '%s\n' "$body" | grep -q '^## Execution plan[[:space:]]*$' \
-    || [[ -z "$(ralph_verify_cmds "$body")" ]]; then
-    echo "ralph: issue #$1 has no execution plan ('## Execution plan' + a '## Verify' block) — refusing to run qwen; refine it first." >&2
+  local problem
+  PLAN_BODY="$(ralph_issue_body "$1")" || { echo "error: cannot read issue #$1" >&2; exit 2; }
+  if ! problem="$(ralph_plan_problem "$PLAN_BODY")"; then
+    echo "ralph: issue #$1: $problem — refusing to run qwen." >&2
     exit 2
   fi
 }
@@ -116,12 +177,13 @@ ralph_require_bot() {
   fi
 }
 
-# ralph_verify <issue> <ref> <log> — runs the issue's Verify commands in a
+# ralph_verify <body> <ref> <log> — runs the plan's Verify commands in a
 # clean, detached worktree at <ref>, so only committed work can turn them
-# green. Appends each command and its output to <log>; returns 1 if any fails.
+# green. Pass the snapshot taken at the start of the run, not a fresh fetch.
+# Writes each command and its output to <log>; returns 1 if any fails.
 ralph_verify() {
   local cmds wt cmd rc=0
-  cmds="$(ralph_verify_cmds "$(ralph_issue_body "$1")")"
+  cmds="$(ralph_verify_cmds "$1")"
   wt="$(mktemp -d "${TMPDIR:-/tmp}/ralph-verify.XXXXXX")"
   git -C "$RALPH_ROOT" worktree add -q --detach "$wt" "$2" || { rm -rf "$wt"; return 2; }
   : > "$3"
@@ -138,6 +200,24 @@ $cmds
 EOF
   git -C "$RALPH_ROOT" worktree remove --force "$wt"
   return "$rc"
+}
+
+# ralph_scope_gate <body> <ref> <log> — fails unless every file the branch
+# changed since its merge-base with origin/master is in the plan's files
+# block. That includes the scripts a Verify command calls: editing one the
+# plan does not list fails here. Appends its verdict to <log>.
+ralph_scope_gate() {
+  local planned changed extra
+  planned="$(ralph_plan_files "$1")"
+  changed="$(git -C "$RALPH_ROOT" diff --name-only --no-renames "origin/master...$2")"
+  extra="$(printf '%s\n' "$changed" | grep -vxF -e "" -f <(printf '%s\n' "$planned") || true)"
+  printf '$ scope gate: files changed vs origin/master must all be in the plan\n' >> "$3"
+  if [[ -z "$extra" ]]; then
+    printf '[ok]\n' >> "$3"
+    return 0
+  fi
+  printf 'not in the plan (revert these):\n%s\n[FAILED]\n' "$extra" >> "$3"
+  return 1
 }
 
 # ralph_afk <iteration-script> <issue> [max-iters] [flags...] — runs the
