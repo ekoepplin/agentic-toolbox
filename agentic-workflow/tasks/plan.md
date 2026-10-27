@@ -194,6 +194,12 @@ expect the first improvements to come from lessons and checks, not prompt tuning
    into child tickets; `to-tickets` keeps its upstream sizing.
 4. **Scope:** this repo only (`REPO` stays hard-coded in `lib.sh`);
    host-project support is a later plan.
+5. **Gates inside a workbench (#26): document only.** qwen's verify commands
+   use only the gates that work in a workbench (`make check`,
+   `bash .devcontainer/scripts/probe-dock.sh`, `make -o image probe`, plain
+   shell checks); refine routes tickets whose runtime gate is `make image`,
+   `make probe` or `make dock-e2e` to `ready-for-human` (Mac-side). See
+   `docs/harnesses/dock-e2e.md` → *Running the gates inside a workbench*.
 
 ## Out of scope
 
