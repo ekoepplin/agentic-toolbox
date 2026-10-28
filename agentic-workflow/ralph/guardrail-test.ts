@@ -2,7 +2,7 @@
 // run directly:  node --experimental-strip-types agentic-workflow/ralph/guardrail-test.ts
 import { blockReason } from "../../.pi/extensions/ralph-guardrail.ts";
 
-const cases: Array<[string, boolean]> = [
+const cases: Array<[string, boolean, string?]> = [
   // blocked
   ["git push --force", true],
   ["git push -f origin ralph/issue-7", true],
@@ -27,11 +27,15 @@ const cases: Array<[string, boolean]> = [
   ["gh pr view 12", false],
   ["gh api repos/ekoepplin/agentic-toolbox/pulls/12", false],
   ["git commit -m 'fix: master doc'", false],
+  // explicit default branch (main)
+  ["git push origin main", true, "main"],
+  ["git push origin HEAD:refs/heads/main", true, "main"],
+  ["git push origin main-notes", false, "main"],
 ];
 
 let failed = 0;
-for (const [cmd, want] of cases) {
-  const got = blockReason(cmd) !== undefined;
+for (const [cmd, want, branch] of cases) {
+  const got = blockReason(cmd, branch) !== undefined;
   if (got !== want) {
     failed++;
     console.log(`FAIL  ${want ? "should block" : "should allow"}: ${cmd}`);
