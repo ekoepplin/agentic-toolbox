@@ -83,8 +83,8 @@ ralph_mission() {
     --jq '"# Issue #\(.number): \(.title)\nState: \(.state)\nLabels: \(.labels | map(.name) | join(", "))\n\n\(.body)"') \
     || return 1
   commits=$(git log -n 5 --format='%h %ad %s' --date=short) || return 1
-  printf 'MISSION: deliver issue #%s. Do NOT switch to other issues even if you see references to them.\n\n%s\n\nRecent commits:\n%s\n\n%s' \
-    "$1" "$issue" "$commits" "$(cat "$2")"
+  printf 'MISSION: deliver issue #%s of %s. Its project instructions are the CLAUDE.md / AGENTS.md at the repo root, plus its glossary and docs/adr/ when they exist. Do NOT switch to other issues even if you see references to them.\n\n%s\n\nRecent commits:\n%s\n\n%s' \
+    "$1" "$REPO" "$issue" "$commits" "$(cat "$2")"
 }
 
 # ── Execution contract (pi loop) ────────────────────────────────────────────
