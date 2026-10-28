@@ -16,11 +16,11 @@ Before writing any code, verify the acceptance criteria are not already satisfie
 
 # EXPLORATION
 
-Read the files the plan lists. Read `docs/adr/` for architectural decisions and `GLOSSARY.md` for domain vocabulary when the plan touches them. If a per-issue draft exists at `agentic-workflow/tasks/drafts/issue-*.md` matching this issue number, read it.
+Read the files the plan lists. Read the target repo's project instructions named in the MISSION line (CLAUDE.md / AGENTS.md at its root) and follow its conventions. Read its glossary and docs/adr/ when they exist and the plan touches them.
 
 # IMPLEMENTATION
 
-Complete the steps of the plan. This repo is a Claude Code **plugin** (see `GLOSSARY.md`), not a Python pipeline — there is no unit-test framework. Do not refactor adjacent code, do not bundle other issues' work, do not "improve" things that aren't broken.
+Complete the steps of the plan. Do not refactor adjacent code, do not bundle other issues' work, do not "improve" things that aren't broken.
 
 # FEEDBACK LOOP
 
@@ -46,11 +46,11 @@ Commit to the current branch. The commit message must:
 
 # HAND-OFF
 
-Do NOT push, do NOT open a pull request, do NOT merge, and never touch `master`. The loop verifies your last commit, then pushes the branch and opens the PR; a reviewer decides about the merge.
+Do NOT push, do NOT open a pull request, do NOT merge, and never touch the default branch. The loop verifies your last commit, then pushes the branch and opens the PR; a reviewer decides about the merge.
 
-If you cannot finish in this run, commit what is solid, leave a comment summarising what's done and what remains, then exit:
+If you cannot finish in this run, commit what is solid, leave a comment summarising what's done and what remains, then exit (`<owner/name>` is the repo in the MISSION line):
 ```
-gh issue comment <N> --repo ekoepplin/agentic-toolbox --body "..."
+gh issue comment <N> --repo <owner/name> --body "..."
 ```
 
 Do NOT close the issue.
