@@ -132,7 +132,8 @@ host project (the base is mounted at its Mac path in every workbench):
 
 ```bash
 cd /Users/ekoepplin/repos/<target-repo>
-/Users/ekoepplin/repos/agentic-toolbox/agentic-workflow/ralph/plan-stamp.sh <issue>   # once per plan
+/Users/ekoepplin/repos/agentic-toolbox/agentic-workflow/ralph/refine.sh <issue>       # Opus writes + stamps the plan (below)
+/Users/ekoepplin/repos/agentic-toolbox/agentic-workflow/ralph/plan-stamp.sh <issue>   # or: stamp a hand-written plan
 /Users/ekoepplin/repos/agentic-toolbox/agentic-workflow/ralph/pi-afk.sh <issue> [max-iters]
 ```
 
@@ -144,7 +145,7 @@ without a GitHub origin the scripts exit 2. A host must be onboarded first
 (bot write access, ruleset, labels — #54).
 
 1. **Stamped plans only.** The issue body must carry this shape (the format
-   is defined once, in `lib.sh`; refine (#31) writes it):
+   is defined once, in `lib.sh`; `refine.sh` writes it, see *Refine* below):
 
    ````markdown
    ## Execution plan
@@ -164,8 +165,9 @@ without a GitHub origin the scripts exit 2. A host must be onboarded first
    `origin/master` at stamping, `hash` covers the two sections (blank lines,
    trailing whitespace and the marker itself excluded, so edits elsewhere in
    the body don't count). `pi-once.sh` and `pi-afk.sh` exit 2 before pi starts
-   when a section or the files block is missing, the plan is unstamped, or it
-   changed since stamping.
+   when a section or the files block is missing, the plan is unstamped, it
+   changed since stamping, or it is **stale**: a file in its files block
+   changed on `origin/<default branch>` since `base` (re-refine it).
    They also exit 2 unless `as-bot` resolves to a bot whose token logs in as
    that same account and can push to the target (`ralph_require_bot`): qwen never runs with your own
    credentials, which on the Mac are the admin's and may bypass the ruleset.
@@ -193,11 +195,44 @@ without a GitHub origin the scripts exit 2. A host must be onboarded first
 5. **Green → PR, never a merge.** The loop pushes the branch and opens a PR as
    the bot (`as-bot`), with the Verify log in the body. The ruleset requires an
    approval from someone other than the pusher.
+6. **Red ×N → escalate.** After the last red iteration (`max-iters`, default
+   3) the loop comments the last Verify output on the issue, labels it
+   `needs-opus` and stops — the next step is
+   `once.sh <N> --backend anthropic --model opus`, not more qwen iterations.
 
-Exit codes: `0` green + PR open, `1` max iterations (default 10), `2` refused,
+Exit codes: `0` green + PR open, `1` max iterations (default 3) → `needs-opus`, `2` refused,
 `3` green without a commit (the plan's checks don't fail on base — re-refine).
 `ralph_gh` runs every `gh` call through `as-bot`, because plain `gh` is not
 logged in inside a workbench.
+
+### Refine — `refine.sh` (Opus)
+
+`refine.sh <N> [--model NAME]` (default `opus`, Claude Code, `claude -p` with
+`settings.ralph.json`) runs from the target repo's root like `pi-afk.sh`.
+Opus gets the ticket body, its comments (an agent brief included) and
+`prompt-refine.md`, reads the code at `origin/<default branch>`, writes
+`## Execution plan` + `## Verify` into the body (replacing any earlier
+plan) and ends with a verdict line: `RALPH-REFINE: plan`, `split #a #b …` or
+`human <reason>`. Every Verify line carries a tag — `# AC<n>` for the
+acceptance criterion it proves, `# guard` for a check that must stay green.
+
+The **plan gates** are a script, not a model (`plan_gates` in `refine.sh`):
+the structural check of `lib.sh`, exactly one of each section, every listed
+file exists at the base or is marked `(new)`, out of scope is stated, the plan
+is within the size limit (6 files, 60 plan lines), every Verify line is
+tagged, and every acceptance criterion has at least one `# AC<n>` command that
+is **red on the base commit** (run in a clean worktree; guards may be green).
+Green → `plan-stamp.sh` stamps it, exit 0. Red → Opus re-refines with the
+findings appended (`# PREVIOUS ATTEMPT`), at most twice; then the ticket gets a
+comment with the findings and `ready-for-human` (exit 1).
+
+- **Oversized** → the gate asks for a split: Opus creates child tickets (each
+  naming `#<N>` as parent) and removes the plan; the script checks both and
+  comments the children on the parent (exit 0).
+- **Mac-only runtime gate** → a Verify line using `make image`, `make probe`,
+  `make probe-dock`, `make dock-e2e` or `docker compose` (not
+  `make -o image probe`), or a `human` verdict, sends the ticket to the owner
+  at once (`ready-for-human`, exit 1) — see `docs/harnesses/dock-e2e.md`.
 
 ### Launch flags, decoded
 

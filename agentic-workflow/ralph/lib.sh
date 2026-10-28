@@ -171,11 +171,32 @@ ralph_plan_problem() {
 
 # ralph_require_plan <issue> — exits 2 unless the issue carries a stamped,
 # unchanged plan; on success sets PLAN_BODY to the body it checked.
+# Planned files that changed on origin/<default> since the plan's base sha.
+# Fails when the base is not in the local clone.
+ralph_plan_stale() {
+  local base f files=()
+  base="$(ralph_plan_marker "$1")"; base="${base%% *}"
+  while IFS= read -r f; do files+=("$f"); done <<EOF
+$(ralph_plan_files "$1")
+EOF
+  git -C "$PROJECT_ROOT" --literal-pathspecs diff --name-only --no-renames \
+    "$base" "origin/$DEFAULT_BRANCH" -- "${files[@]}"
+}
+
 ralph_require_plan() {
-  local problem
+  local problem stale
   PLAN_BODY="$(ralph_issue_body "$1")" || { echo "error: cannot read issue #$1" >&2; exit 2; }
   if ! problem="$(ralph_plan_problem "$PLAN_BODY")"; then
     echo "ralph: issue #$1: $problem — refusing to run qwen." >&2
+    exit 2
+  fi
+  if ! stale="$(ralph_plan_stale "$PLAN_BODY" 2>&1)"; then
+    echo "ralph: issue #$1: cannot diff the plan base against origin/$DEFAULT_BRANCH ($stale) — refusing to run qwen; re-refine #$1." >&2
+    exit 2
+  fi
+  if [[ -n "$stale" ]]; then
+    printf 'ralph: issue #%s: planned files changed on origin/%s since the plan base:\n%s\nrefusing to run qwen — the plan is stale; re-refine #%s.\n' \
+      "$1" "$DEFAULT_BRANCH" "$stale" "$1" >&2
     exit 2
   fi
 }
