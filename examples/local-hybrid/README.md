@@ -44,17 +44,52 @@ Check the server: `./check.sh` (model list, plain chat, a tool call over the Ant
 - **Map Claude Code's model tiers.** It sends background requests to haiku/sonnet/opus by name.
   `claude-local` points all three at your local model.
 - **There is no sandbox.** The agent runs `bash` as you. In one of my runs the local model ran
-  `pip install` without being asked. Use a throwaway directory, container or VM.
+  `pip install` without being asked; in another it wrote a file into a different repo on my
+  laptop before it noticed and deleted it again. Use a throwaway directory, container or VM.
 
-## Claude + local: two ways
+## Claude + local: three ways
 
-| | Split loop (`loop.sh`) | Router (`hybrid-router.ts`) |
-|---|---|---|
-| Idea | Separate Pi runs: Claude plans and judges, local executes | One Pi session; a [virtual model](https://docs.pi.dev/latest/virtual-models) picks Claude or local per request |
-| Roles | Enforced: the executor sees only the plan, the judge only reads | Fuzzy: Claude often finished the work before the switch |
-| Who says "done" | A script runs the plan's checks, then Claude scores | The model |
+| | Orchestrator (`hybrid-orchestrator.ts`) | Split loop (`loop.sh`) | Router (`hybrid-router.ts`) |
+|---|---|---|---|
+| Idea | One interactive Pi session; a [virtual model](https://docs.pi.dev/latest/virtual-models) runs plan → build → review | Separate Pi runs per phase, driven by a script | One Pi session; the virtual model switches to local after Claude's first edit |
+| Roles | Enforced: Claude cannot edit, write or run bash | Enforced: the executor sees only the plan, the judge only reads | Fuzzy: Claude often finished the work before the switch |
+| Who says "done" | A script runs the plan's checks, then Claude scores | A script runs the plan's checks, then Claude scores | The model |
+| You talk to Claude | yes, it can ask you before planning | only before: you write the plan with Claude | yes |
 
-**Split loop**, the one I use:
+**Orchestrator**, the one I use day to day. Select one model, `hybrid/orchestrate`, and every
+prompt runs through three phases:
+
+```
+ you ──prompt──> plan    (Claude)  reads the code, asks you if unclear, calls `handoff`:
+                                   steps, acceptance criteria, files, Verify commands
+                 build   (local)   implements the plan, stops
+                 verify  (script)  runs the Verify commands ── red ──> back to build
+                 review  (Claude)  reads the result, scores each criterion 0–2, calls
+                                   `verdict` ── fail ──> back to build, with feedback
+                                             ── pass ──> done
+```
+
+- **Roles are enforced, not suggested.** In plan and review, the extension blocks `edit`,
+  `write` and `bash`, so Claude cannot quietly do the work itself. That was the weak spot of the
+  router. `handoff` only works in plan, `verdict` only in review.
+- **The script decides "green", not a model.** The extension runs the Verify commands itself.
+  Claude's score is the second opinion on top.
+- **At most three build rounds per prompt** (`HYBRID_MAX_ROUNDS`). Then it stops and shows what
+  is still red.
+- **Fallbacks:** local server down at the start of a round → Claude builds that round. A failed
+  local request retries on Claude. Compaction summaries go to the local model when it is up.
+- The footer shows the phase, the round and who is working, e.g. `build · round 1/3 · local`.
+
+```bash
+HYBRID_WORKER=gpu/<id> pi -e ./hybrid-orchestrator.ts --model hybrid/orchestrate
+```
+
+To load it in every session, copy the file to `~/.pi/agent/extensions/` and set
+`HYBRID_WORKER` in your shell. Want to watch round 2 fix what round 1 missed? Add checks neither
+model sees up front: `HYBRID_HIDDEN_VERIFY=hidden-verify.txt` (with a slugify task). Keep them
+consistent with the plan, or no round can pass.
+
+**Split loop**, the same idea without a session, for planned work you start and walk away from:
 
 1. Talk the task through with Claude until it writes a plan: task, acceptance criteria, files,
    and a `## Verify` block with shell commands. Example: [`plan.md`](plan.md).
@@ -76,7 +111,7 @@ EXEC=gpu/<id> HIDDEN_VERIFY=hidden-verify.txt ./loop.sh plan.md "$w"
 HYBRID_WORKER=gpu/<id> pi -e ./hybrid-router.ts --model hybrid/auto
 ```
 
-Both use `anthropic/claude-opus-5-5` for Claude (`JUDGE` / `HYBRID_PLANNER` to change).
+All three use `anthropic/claude-opus-5-5` for Claude (`JUDGE` / `HYBRID_PLANNER` to change).
 
 ## Claude access
 

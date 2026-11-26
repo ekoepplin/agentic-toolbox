@@ -1,3 +1,4 @@
-# Held-out checks for plan.md (HIDDEN_VERIFY). The executor does not see them in round 1.
-# Gap the Opus judge found in Test 6: non-German accents were dropped ('Café & crème' -> 'caf-cr-me').
+# Held-out checks for a slugify task (loop.sh: HIDDEN_VERIFY, hybrid-orchestrator.ts: HYBRID_HIDDEN_VERIFY).
+# The local model does not see them in round 1. A gap Claude found as judge in an earlier run:
+# non-German accents were dropped ('Café & crème' -> 'caf-cr-me').
 python3 -c "from slugify import slugify as s; assert s('Café & crème') == 'cafe-creme', s('Café & crème')"
