@@ -51,6 +51,7 @@ agentic-toolbox/
 ├── scripts/         # check.sh (drift guard), dock-host.sh (scaffolder), dock-e2e.sh, setup-mac-voice.sh (docs/voice.md)
 ├── Makefile         # check, image, probe, probe-dock, dock, dock-e2e
 ├── agentic-workflow/# Ralph AFK loop (ralph/, shared lib.sh) + task files
+├── examples/        # Standalone teaching examples (local-hybrid/: local model + Claude, blog companion)
 ├── docs/            # ADRs, harness guides, agent docs
 └── compose.yaml     # This repo's own workbench stack
 ```
