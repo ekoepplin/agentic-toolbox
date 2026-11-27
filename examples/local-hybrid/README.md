@@ -111,7 +111,9 @@ EXEC=gpu/<id> HIDDEN_VERIFY=hidden-verify.txt ./loop.sh plan.md "$w"
 HYBRID_WORKER=gpu/<id> pi -e ./hybrid-router.ts --model hybrid/auto
 ```
 
-All three use `anthropic/claude-opus-5-5` for Claude (`JUDGE` / `HYBRID_PLANNER` to change).
+All three default to `anthropic/claude-opus-5-5` as the cloud model. Any model Pi can reach works:
+set `JUDGE` / `HYBRID_PLANNER` to `<provider>/<id>`, e.g. from a ChatGPT or Copilot login (only
+Claude tested).
 
 ## Claude access
 
